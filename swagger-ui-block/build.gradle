@@ -1,0 +1,18 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
+    }
+}
+
+dependencies {
+    implementation project(':service-block')
+    implementation group: 'org.webjars', name: 'webjars-locator', version: '0.40'
+    api group: 'org.webjars.npm', name: 'swagger-ui-dist', version: '3.45.1'
+}

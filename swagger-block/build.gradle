@@ -1,0 +1,18 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
+    }
+}
+
+dependencies {
+    implementation project(':service-block')
+    implementation group: 'com.github.swagger-akka-http', name: 'swagger-akka-http_2.13', version: '2.4.2'
+    implementation group: 'com.typesafe.akka', name: 'akka-stream_2.13', version: '2.6.14'
+}

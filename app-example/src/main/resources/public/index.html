@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>App Example</title>
+</head>
+<body>
+    <script>
+      var openApiLink = location.protocol+'//'+location.hostname+(location.port ? ':'+location.port: '')+'/api-docs/openapi.json'
+      var linkHref = location.protocol+'//'+location.hostname+(location.port ? ':'+location.port: '')+'/swagger-ui/?url=' + encodeURIComponent(openApiLink);
+      var a = document.createElement('a');
+      var linkText = document.createTextNode("Swagger UI");
+      a.appendChild(linkText);
+      a.title = "Swagger UI";
+      a.href = linkHref;
+      document.body.appendChild(a);
+    </script>
+</body>
+</html>

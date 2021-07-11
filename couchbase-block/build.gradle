@@ -1,0 +1,19 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
+    }
+}
+
+dependencies {
+    api 'com.couchbase.client:java-client:3.1.5'
+    implementation project(':service-block')
+    implementation project(':health-block')
+    implementation project(':secrets-config-block')
+}

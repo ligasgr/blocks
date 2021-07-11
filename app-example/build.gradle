@@ -1,0 +1,57 @@
+plugins {
+    id 'java'
+    id "com.github.johnrengelman.shadow" version "6.1.0"
+    id "com.palantir.docker" version "0.26.0"
+    id "com.palantir.docker-run" version "0.26.0"
+}
+
+version '0.1.0'
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'example.Main'
+    }
+}
+
+shadowJar {
+    append 'reference.conf'
+    mergeServiceFiles()
+}
+
+build.dependsOn(shadowJar)
+
+docker {
+    name "${project.name}:${project.version}"
+    files tasks.shadowJar.outputs
+}
+
+dockerRun {
+    name "${project.name}"
+    image "${project.name}:${project.version}"
+    ports '8080:8080'
+    clean true
+}
+
+dependencies {
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.14.1'
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.14.1'
+    implementation group: 'io.swagger.core.v3', name: 'swagger-annotations', version: '2.1.7'
+    implementation group: 'javax.ws.rs', name: 'javax.ws.rs-api', version: '2.1.1'
+    implementation group: 'org.postgresql', name: 'r2dbc-postgresql', version: '0.9.0.M1'
+    implementation group: 'org.apache.activemq', name: 'activemq-client', version: '5.16.2'
+    implementation project(':service-akka-typed-block')
+    implementation project(':rest-endpoints-block')
+    implementation project(':health-block')
+    implementation project(':swagger-block')
+    implementation project(':swagger-ui-block')
+    implementation project(':ui-block')
+    implementation project(':secrets-config-block')
+    implementation project(':rdbms-block')
+    implementation project(':couchbase-block')
+    implementation project(':file-storage-block')
+    implementation project(':websocket-block')
+    implementation project(':mongo-block')
+    implementation project(':keystore-block')
+    implementation project(':https-block')
+    implementation project(':jms-block')
+}
