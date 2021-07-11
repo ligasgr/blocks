@@ -3,14 +3,6 @@ plugins {
     id 'maven-publish'
 }
 
-publishing {
-    publications {
-        maven(MavenPublication) {
-            from components.java
-        }
-    }
-}
-
 dependencies {
     api group: 'com.typesafe.akka', name: 'akka-http_2.13', version: '10.2.4'
     api group: 'com.typesafe.akka', name: 'akka-http-jackson_2.13', version: '10.2.4'

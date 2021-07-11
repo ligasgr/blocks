@@ -7,9 +7,55 @@ allprojects {
 }
 
 subprojects {
-    version = '0-SNAPSHOT'
+    project.group = 'io.github.ligasgr.blocks'
+    project.version = '0.1'
     plugins.withType(JavaPlugin) {
         sourceCompatibility = 1.8
         targetCompatibility = 1.8
+        java {
+            withJavadocJar()
+            withSourcesJar()
+        }
+    }
+
+    plugins.withType(MavenPublishPlugin) {
+        publishing {
+            publications {
+                maven(MavenPublication) {
+                    groupId project.group
+                    artifactId project.name
+                    version project.version
+                    from components.java
+                    pom {
+                        name = project.group + ':' + project.name
+                        description = 'Blocks Framework - ' + project.name
+                        url = 'https://github.com/ligasgr/blocks'
+                        licenses {
+                            license {
+                                name = 'Unlicense'
+                                url = 'https://unlicense.org/'
+                            }
+                        }
+                        developers {
+                            developer {
+                                id = 'ligasgr'
+                                name = 'Grzegorz Ligas'
+                                email = 'ligasgr@gmail.com'
+                            }
+                        }
+                        scm {
+                            connection = 'scm:git:git://github.com/ligasgr/blocks.git'
+                            developerConnection = 'scm:git:ssh://github.com:ligasgr/blocks.git'
+                            url = 'https://github.com/ligasgr/blocks'
+                        }
+                    }
+                }
+            }
+            repositories {
+                maven {
+                    url = "https://s01.oss.sonatype.org/"
+                }
+            }
+        }
     }
 }

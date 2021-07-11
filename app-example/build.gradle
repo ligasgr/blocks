@@ -5,8 +5,6 @@ plugins {
     id "com.palantir.docker-run" version "0.26.0"
 }
 
-version '0.1.0'
-
 jar {
     manifest {
         attributes 'Main-Class': 'example.Main'
