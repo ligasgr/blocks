@@ -57,5 +57,10 @@ subprojects {
                 }
             }
         }
+        plugins.withType(SigningPlugin) {
+            signing {
+                sign publishing.publications.maven
+            }
+        }
     }
 }
