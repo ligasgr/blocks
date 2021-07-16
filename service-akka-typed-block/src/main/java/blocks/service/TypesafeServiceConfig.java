@@ -3,7 +3,10 @@ package blocks.service;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
+import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class TypesafeServiceConfig implements ServiceConfig {
 
@@ -49,6 +52,13 @@ public class TypesafeServiceConfig implements ServiceConfig {
     @Override
     public int getInt(String path) {
         return config.getInt(path);
+    }
+
+
+    @Override
+    public Map<String, String> getStringMap(String path) {
+        return Collections.unmodifiableMap(config.getConfig(path).entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> config.getString(e.getKey()))));
     }
 
     @Override

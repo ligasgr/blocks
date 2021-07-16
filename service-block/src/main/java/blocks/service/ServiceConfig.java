@@ -1,5 +1,6 @@
 package blocks.service;
 
+import java.util.Map;
 import java.util.Optional;
 
 public interface ServiceConfig {
@@ -14,6 +15,8 @@ public interface ServiceConfig {
     String getString(String path);
 
     int getInt(String path);
+
+    Map<String, String> getStringMap(String path);
 
     BlockConfig getBlockConfig(String path);
 }

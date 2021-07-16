@@ -3,7 +3,10 @@ package blocks.service;
 import com.typesafe.config.Config;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class TypesafeBlockConfig implements BlockConfig {
     private final Config config;
@@ -35,5 +38,11 @@ public class TypesafeBlockConfig implements BlockConfig {
     @Override
     public List<String> getStringList(final String path) {
         return config.getStringList(path);
+    }
+
+    @Override
+    public Map<String, String> getStringMap(String path) {
+        return Collections.unmodifiableMap(config.getConfig(path).entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> config.getString(e.getKey()))));
     }
 }
