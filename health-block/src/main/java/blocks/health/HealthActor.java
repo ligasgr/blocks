@@ -6,6 +6,7 @@ import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
 import akka.actor.typed.javadsl.ReceiveBuilder;
+import akka.japi.Pair;
 import blocks.service.BlockStatus;
 
 import java.time.Clock;
@@ -13,11 +14,11 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BinaryOperator;
 
 import static java.util.Objects.requireNonNull;
 
@@ -26,6 +27,8 @@ public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
     private final Clock clock;
     private final Map<String, ComponentHealth> dependencies = new HashMap<>();
     private final Map<String, BlockHealthInfo> blocks = new HashMap<>();
+
+    private static final BinaryOperator<Pair<Boolean, Boolean>> HEALTH_INFO_REDUCE_OPERATOR = (current, incoming) -> Pair.create(current.first() && incoming.first(), current.second() && incoming.second());
 
     public static Behavior<HealthProtocol.Message> behavior(final Instant startInstant, final Clock clock) {
         return Behaviors.setup(context -> new HealthActor(context,
@@ -51,24 +54,16 @@ public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
     }
 
     private Behavior<HealthProtocol.Message> onGetHealth(final HealthProtocol.GetHealth m) {
-        boolean isHealthy = true;
-        boolean isInitialized = true;
-        for (BlockHealthInfo blockHealthInfoEntry : blocks.values()) {
-            if (blockHealthInfoEntry.mandatory && !(blockHealthInfoEntry.status == BlockStatus.INITIALIZED)) {
-                isHealthy = false;
-            }
-        }
+        boolean isHealthy = blocks.values().stream()
+            .filter(b -> b.mandatory)
+            .allMatch(b -> b.status == BlockStatus.INITIALIZED);
 
-        Collection<ComponentHealth> dependencyList = dependencies.values();
-        for (ComponentHealth dependency : dependencyList) {
-            if (!dependency.isHealthy) {
-                isHealthy = false;
-            }
-            if (!dependency.isInitialized) {
-                isInitialized = false;
-            }
-        }
-        final ServiceHealth serviceHealth = new ServiceHealth(isHealthy, isInitialized, blocks, new ArrayList<>(dependencies.values()), startDateTime, getNow());
+        final Pair<Boolean, Boolean> isHealthyAndInitialized = Pair.create(isHealthy, true);
+
+        final Pair<Boolean, Boolean> finalHealthAndInitialized = dependencies.values().stream()
+            .map(d -> Pair.create(d.isHealthy, d.isInitialized))
+            .reduce(isHealthyAndInitialized, HEALTH_INFO_REDUCE_OPERATOR);
+        final ServiceHealth serviceHealth = new ServiceHealth(finalHealthAndInitialized.first(), finalHealthAndInitialized.second(), blocks, new ArrayList<>(dependencies.values()), startDateTime, getNow());
         m.replyTo.tell(new HealthProtocol.Health(serviceHealth));
         return Behaviors.same();
     }
