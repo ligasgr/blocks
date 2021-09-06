@@ -7,10 +7,11 @@ import java.time.ZonedDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-public class ComponentHealth {
+public final class ComponentHealth {
     public final String name;
     public final boolean isHealthy;
     public final boolean isInitialized;
@@ -18,7 +19,7 @@ public class ComponentHealth {
     public final List<ComponentHealth> dependencies;
     public final Map<String, JsonNode> details;
     public final ZonedDateTime refreshedAt;
-    public final Optional<Long> checkDurationInNanoseconds;
+    public final Optional<Long> checkDurationInNanoseconds; // FIXME replace with OptionalLong type
 
     public ComponentHealth(
             final String name,
@@ -48,5 +49,32 @@ public class ComponentHealth {
         this.details = details;
         this.refreshedAt = refreshedAt;
         this.checkDurationInNanoseconds = checkDurationInNanoseconds;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ComponentHealth that = (ComponentHealth) o;
+        return isHealthy == that.isHealthy && isInitialized == that.isInitialized && Objects.equals(name, that.name) && Objects.equals(error, that.error) && Objects.equals(dependencies, that.dependencies) && Objects.equals(details, that.details) && Objects.equals(refreshedAt, that.refreshedAt) && Objects.equals(checkDurationInNanoseconds, that.checkDurationInNanoseconds);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, isHealthy, isInitialized, error, dependencies, details, refreshedAt, checkDurationInNanoseconds);
+    }
+
+    @Override
+    public String toString() {
+        return "ComponentHealth{" +
+            "name='" + name + '\'' +
+            ", isHealthy=" + isHealthy +
+            ", isInitialized=" + isInitialized +
+            ", error=" + error +
+            ", dependencies=" + dependencies +
+            ", details=" + details +
+            ", refreshedAt=" + refreshedAt +
+            ", checkDurationInNanoseconds=" + checkDurationInNanoseconds +
+            '}';
     }
 }

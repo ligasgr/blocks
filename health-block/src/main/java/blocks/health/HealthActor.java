@@ -19,6 +19,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.util.Objects.requireNonNull;
+
 public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
     private final ZonedDateTime startDateTime;
     private final Clock clock;
@@ -26,7 +28,9 @@ public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
     private final Map<String, BlockHealthInfo> blocks = new HashMap<>();
 
     public static Behavior<HealthProtocol.Message> behavior(final Instant startInstant, final Clock clock) {
-        return Behaviors.setup(context -> new HealthActor(context, startInstant, clock));
+        return Behaviors.setup(context -> new HealthActor(context,
+            requireNonNull(startInstant),
+            requireNonNull(clock)));
     }
 
     private HealthActor(final ActorContext<HealthProtocol.Message> context, final Instant startInstant, final Clock clock) {
@@ -38,12 +42,12 @@ public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
     @Override
     public Receive<HealthProtocol.Message> createReceive() {
         return ReceiveBuilder.<HealthProtocol.Message>create()
-                .onMessage(HealthProtocol.GetHealth.class, this::onGetHealth)
-                .onMessage(HealthProtocol.RegisterBlock.class, this::onRegisterBlock)
-                .onMessage(HealthProtocol.UpdateBlockStatus.class, this::onUpdateBlockStatus)
-                .onMessage(HealthProtocol.RegisterComponent.class, this::onRegisterComponent)
-                .onMessage(HealthProtocol.UpdateComponentHealth.class, this::onUpdateComponentHealth)
-                .build();
+            .onMessage(HealthProtocol.GetHealth.class, this::onGetHealth)
+            .onMessage(HealthProtocol.RegisterBlock.class, this::onRegisterBlock)
+            .onMessage(HealthProtocol.UpdateBlockStatus.class, this::onUpdateBlockStatus)
+            .onMessage(HealthProtocol.RegisterComponent.class, this::onRegisterComponent)
+            .onMessage(HealthProtocol.UpdateComponentHealth.class, this::onUpdateComponentHealth)
+            .build();
     }
 
     private Behavior<HealthProtocol.Message> onGetHealth(final HealthProtocol.GetHealth m) {
@@ -54,6 +58,7 @@ public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
                 isHealthy = false;
             }
         }
+
         Collection<ComponentHealth> dependencyList = dependencies.values();
         for (ComponentHealth dependency : dependencyList) {
             if (!dependency.isHealthy) {
@@ -78,7 +83,7 @@ public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
     }
 
     private Behavior<HealthProtocol.Message> onUpdateBlockStatus(final HealthProtocol.UpdateBlockStatus message) {
-        BlockHealthInfo existing = blocks.get(message.block);
+        final BlockHealthInfo existing = blocks.get(message.block);
         blocks.put(message.block, new BlockHealthInfo(message.status, existing.mandatory));
         return Behaviors.same();
     }
