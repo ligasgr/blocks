@@ -8,7 +8,7 @@ dependencies {
     api 'org.mongodb:mongodb-driver-reactivestreams:4.2.3'
     //use https://mvnrepository.com/artifact/com.lightbend.akka/akka-stream-alpakka-mongodb_2.13/3.0.0
 //    https://doc.akka.io/docs/alpakka/current/mongodb.html
-    api group: 'com.typesafe.akka', name: 'akka-stream_2.13', version: '2.6.14'
+    api group: 'com.typesafe.akka', name: "akka-stream_${scalaBinaryVersion}", version: akkaTypedVersion
     api project(':service-block')
     implementation project(':health-block')
     implementation project(':secrets-config-block')

@@ -3,6 +3,8 @@ package blocks.health;
 import akka.actor.typed.ActorRef;
 import blocks.service.BlockStatus;
 
+import java.util.Objects;
+
 public interface HealthProtocol {
     interface Message {
 
@@ -21,6 +23,26 @@ public interface HealthProtocol {
 
         public Health(final ServiceHealth serviceHealth) {
             this.serviceHealth = serviceHealth;
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Health health = (Health) o;
+            return Objects.equals(serviceHealth, health.serviceHealth);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(serviceHealth);
+        }
+
+        @Override
+        public String toString() {
+            return "Health{" +
+                "serviceHealth=" + serviceHealth +
+                '}';
         }
     }
 
