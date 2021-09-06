@@ -1,0 +1,32 @@
+plugins {
+    id 'java-library'
+}
+
+ext {
+    junitVersion = '5.7.2'
+    mockitoVersion = '3.11.2'
+    hamcrestVersion = '2.2'
+}
+
+dependencies {
+    api group: 'com.typesafe.akka', name: "akka-actor-testkit-typed_${scalaBinaryVersion}", version: akkaTypedVersion
+    api group: 'org.junit.jupiter', name: 'junit-jupiter-api', version: junitVersion
+    api group: 'org.junit.jupiter', name: 'junit-jupiter-params', version: junitVersion
+    api group: 'org.mockito', name: 'mockito-core', version: mockitoVersion
+    api group: 'org.hamcrest', name: 'hamcrest', version: hamcrestVersion
+}
+
+project.afterEvaluate {
+    project.rootProject.subprojects {
+        plugins.withType(JavaPlugin) {
+            dependencies {
+                testImplementation project(':service-block-testkit')
+                testRuntimeOnly group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: junitVersion
+            }
+        }
+
+        test {
+            useJUnitPlatform()
+        }
+    }
+}
