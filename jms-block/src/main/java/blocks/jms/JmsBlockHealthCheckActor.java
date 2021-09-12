@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.stream.Collectors;
 
 import static akka.stream.alpakka.jms.javadsl.JmsConnectorState.Connected;
@@ -72,16 +73,16 @@ public class JmsBlockHealthCheckActor extends AbstractBehavior<JmsBlockHealthChe
     private Behavior<Protocol.Message> onHealthInfo(final Protocol.HealthInfo msg) {
         if (msg.exception != null) {
             String message = msg.exception.getMessage() != null ? msg.exception.getMessage() : msg.exception.getClass().getCanonicalName();
-            ComponentHealth health = new ComponentHealth(componentName(), false, msg.initialized, Optional.of(message), Collections.emptyList(), ZonedDateTime.now(clock), Optional.empty());
+            ComponentHealth health = new ComponentHealth(componentName(), false, msg.initialized, Optional.of(message), Collections.emptyList(), ZonedDateTime.now(clock), OptionalLong.empty());
             healthActor.tell(new HealthProtocol.UpdateComponentHealth(componentName(), health));
         } else {
             final List<ComponentHealth> dependencies = destinationHealth.entrySet().stream()
                     .map(endpointDetails -> new ComponentHealth(endpointDetails.getKey(), endpointDetails.getValue().first(), true,
-                            endpointDetails.getValue().first() ? Optional.empty() : Optional.of(endpointDetails.getValue().second().name()), Collections.emptyList(), ZonedDateTime.now(clock), Optional.empty()))
+                            endpointDetails.getValue().first() ? Optional.empty() : Optional.of(endpointDetails.getValue().second().name()), Collections.emptyList(), ZonedDateTime.now(clock), OptionalLong.empty()))
                     .collect(Collectors.toList());
             boolean allEndpointsHealthy = dependencies.stream().allMatch(c -> c.isHealthy);
             boolean isHealthy = !dependencies.isEmpty() && allEndpointsHealthy;
-            ComponentHealth health = new ComponentHealth(componentName(), isHealthy, msg.initialized, Optional.empty(), dependencies, ZonedDateTime.now(clock), Optional.empty());
+            ComponentHealth health = new ComponentHealth(componentName(), isHealthy, msg.initialized, Optional.empty(), dependencies, ZonedDateTime.now(clock), OptionalLong.empty());
             healthActor.tell(new HealthProtocol.UpdateComponentHealth(componentName(), health));
         }
         return Behaviors.same();

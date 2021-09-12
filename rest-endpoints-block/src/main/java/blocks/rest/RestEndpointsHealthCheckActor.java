@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.stream.Collectors;
 
 public class RestEndpointsHealthCheckActor extends AbstractBehavior<Message> {
@@ -64,14 +65,14 @@ public class RestEndpointsHealthCheckActor extends AbstractBehavior<Message> {
     private Behavior<Message> onHealthInfo(final Protocol.HealthInfo msg) {
         if (msg.exception != null) {
             String message = msg.exception.getMessage() != null ? msg.exception.getMessage() : msg.exception.getClass().getCanonicalName();
-            ComponentHealth health = new ComponentHealth(COMPONENT, false, true, Optional.of(message), Collections.emptyList(), ZonedDateTime.now(clock), Optional.empty());
+            ComponentHealth health = new ComponentHealth(COMPONENT, false, true, Optional.of(message), Collections.emptyList(), ZonedDateTime.now(clock), OptionalLong.empty());
             healthActor.tell(new HealthProtocol.UpdateComponentHealth(COMPONENT, health));
         } else {
             boolean isHealthy = msg.result.values().stream().allMatch(s -> s.isHealthy);
             final List<ComponentHealth> details = msg.result.values().stream()
-                    .map(endpointStatus -> new ComponentHealth(endpointStatus.name, endpointStatus.isHealthy, true, endpointStatus.error, Collections.emptyList(), endpointStatus.lastChecked, Optional.of(endpointStatus.checkDurationInNanos)))
+                    .map(endpointStatus -> new ComponentHealth(endpointStatus.name, endpointStatus.isHealthy, true, endpointStatus.error, Collections.emptyList(), endpointStatus.lastChecked, OptionalLong.of(endpointStatus.checkDurationInNanos)))
                     .collect(Collectors.toList());
-            ComponentHealth health = new ComponentHealth(COMPONENT, isHealthy, true, Optional.empty(), details, ZonedDateTime.now(clock), Optional.empty());
+            ComponentHealth health = new ComponentHealth(COMPONENT, isHealthy, true, Optional.empty(), details, ZonedDateTime.now(clock), OptionalLong.empty());
             healthActor.tell(new HealthProtocol.UpdateComponentHealth(COMPONENT, health));
         }
         timer.startSingleTimer(CHECK_HEALTH, Duration.ofMinutes(5));

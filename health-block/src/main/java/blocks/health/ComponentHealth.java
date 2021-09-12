@@ -9,7 +9,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalLong;
 
+@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public final class ComponentHealth {
     public final String name;
@@ -19,28 +21,26 @@ public final class ComponentHealth {
     public final List<ComponentHealth> dependencies;
     public final Map<String, JsonNode> details;
     public final ZonedDateTime refreshedAt;
-    public final Optional<Long> checkDurationInNanoseconds; // FIXME replace with OptionalLong type
+    public final OptionalLong checkDurationInNanoseconds;
 
-    public ComponentHealth(
-            final String name,
-            final boolean isHealthy,
-            final boolean isInitialized,
-            final Optional<String> error,
-            final List<ComponentHealth> dependencies,
-            final ZonedDateTime refreshedAt,
-            final Optional<Long> checkDurationInNanoseconds) {
+    public ComponentHealth(final String name,
+                           final boolean isHealthy,
+                           final boolean isInitialized,
+                           final Optional<String> error,
+                           final List<ComponentHealth> dependencies,
+                           final ZonedDateTime refreshedAt,
+                           final OptionalLong checkDurationInNanoseconds) {
         this(name, isHealthy, isInitialized, error, dependencies, Collections.emptyMap(), refreshedAt, checkDurationInNanoseconds);
     }
 
-    public ComponentHealth(
-            final String name,
-            final boolean isHealthy,
-            final boolean isInitialized,
-            final Optional<String> error,
-            final List<ComponentHealth> dependencies,
-            final Map<String, JsonNode> details,
-            final ZonedDateTime refreshedAt,
-            final Optional<Long> checkDurationInNanoseconds) {
+    public ComponentHealth(final String name,
+                           final boolean isHealthy,
+                           final boolean isInitialized,
+                           final Optional<String> error,
+                           final List<ComponentHealth> dependencies,
+                           final Map<String, JsonNode> details,
+                           final ZonedDateTime refreshedAt,
+                           final OptionalLong checkDurationInNanoseconds) {
         this.name = name;
         this.isHealthy = isHealthy;
         this.isInitialized = isInitialized;

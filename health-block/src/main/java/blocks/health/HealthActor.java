@@ -18,6 +18,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.function.BinaryOperator;
 
 import static java.util.Objects.requireNonNull;
@@ -87,7 +88,7 @@ public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
         if (dependencies.containsKey(message.component)) {
             getContext().getLog().error("Tried to register component '{}' again", message.component);
         } else {
-            dependencies.put(message.component, new ComponentHealth(message.component, false, false, Optional.empty(), Collections.emptyList(), getNow(), Optional.empty()));
+            dependencies.put(message.component, new ComponentHealth(message.component, false, false, Optional.empty(), Collections.emptyList(), getNow(), OptionalLong.empty()));
         }
         return Behaviors.same();
     }

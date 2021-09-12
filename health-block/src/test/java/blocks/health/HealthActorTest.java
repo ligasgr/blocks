@@ -15,6 +15,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Optional;
+import java.util.OptionalLong;
 
 import static blocks.testkit.MockitoHelper.exactlyOnce;
 import static blocks.testkit.MockitoHelper.exactlyTwice;
@@ -105,7 +106,7 @@ class HealthActorTest extends BlockTestBase {
     public void shouldReportUnhealthyWithNewUninitializedComponentRegistered() {
         final HealthProtocol.Health testComponent = new HealthProtocol.Health(
             new ServiceHealth(false, false, emptyMap(),
-                singletonList(new ComponentHealth("TestComponent", false, false, Optional.empty(), emptyList(), ZONED_NOW, Optional.empty())),
+                singletonList(new ComponentHealth("TestComponent", false, false, Optional.empty(), emptyList(), ZONED_NOW, OptionalLong.empty())),
                 ZONED_START_TIME, ZONED_NOW));
 
         healthActor.tell(new HealthProtocol.GetHealth(testProbe.ref()));
