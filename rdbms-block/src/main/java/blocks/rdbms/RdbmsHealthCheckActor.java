@@ -20,6 +20,7 @@ import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -93,11 +94,11 @@ public class RdbmsHealthCheckActor extends AbstractBehavior<RdbmsHealthCheckActo
         Duration checkDelay;
         if (msg.exception != null) {
             String message = msg.exception.getMessage() != null ? msg.exception.getMessage() : msg.exception.getClass().getCanonicalName();
-            ComponentHealth health = new ComponentHealth(componentName(), false, msg.initialized, Optional.of(message), Collections.emptyList(), ZonedDateTime.now(clock), Optional.empty());
+            ComponentHealth health = new ComponentHealth(componentName(), false, msg.initialized, Optional.of(message), Collections.emptyList(), ZonedDateTime.now(clock), OptionalLong.empty());
             healthActor.tell(new HealthProtocol.UpdateComponentHealth(componentName(), health));
             checkDelay = Duration.ofSeconds(3);
         } else {
-            ComponentHealth health = new ComponentHealth(componentName(), true, msg.initialized, Optional.empty(), Collections.emptyList(), ZonedDateTime.now(clock), Optional.empty());
+            ComponentHealth health = new ComponentHealth(componentName(), true, msg.initialized, Optional.empty(), Collections.emptyList(), ZonedDateTime.now(clock), OptionalLong.empty());
             healthActor.tell(new HealthProtocol.UpdateComponentHealth(componentName(), health));
             checkDelay = Duration.ofSeconds(15);
         }
