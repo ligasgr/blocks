@@ -42,7 +42,8 @@ public class TypesafeBlockConfig implements BlockConfig {
 
     @Override
     public Map<String, String> getStringMap(String path) {
-        return Collections.unmodifiableMap(config.getConfig(path).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> config.getString(e.getKey()))));
+        final Config configConfig = this.config.getConfig(path);
+        return Collections.unmodifiableMap(configConfig.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> configConfig.getString(e.getKey()))));
     }
 }

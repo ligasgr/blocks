@@ -69,8 +69,9 @@ public class TypesafeServiceConfig implements ServiceConfig {
 
     @Override
     public Map<String, String> getStringMap(String path) {
-        return Collections.unmodifiableMap(config.getConfig(path).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> config.getString(e.getKey()))));
+        final Config configObject = this.config.getConfig(path);
+        return Collections.unmodifiableMap(configObject.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> configObject.getString(e.getKey()))));
     }
 
     @Override
