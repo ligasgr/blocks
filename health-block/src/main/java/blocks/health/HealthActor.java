@@ -8,6 +8,7 @@ import akka.actor.typed.javadsl.Receive;
 import akka.actor.typed.javadsl.ReceiveBuilder;
 import akka.japi.Pair;
 import blocks.service.BlockStatus;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -26,45 +27,48 @@ import static java.util.Objects.requireNonNull;
 public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
     private final ZonedDateTime startDateTime;
     private final Clock clock;
+    private final Map<String, JsonNode> staticProperties;
     private final Map<String, ComponentHealth> dependencies = new HashMap<>();
     private final Map<String, BlockHealthInfo> blocks = new HashMap<>();
 
     private static final BinaryOperator<Pair<Boolean, Boolean>> HEALTH_INFO_REDUCE_OPERATOR = (current, incoming) -> Pair.create(current.first() && incoming.first(), current.second() && incoming.second());
 
-    public static Behavior<HealthProtocol.Message> behavior(final Instant startInstant, final Clock clock) {
+    public static Behavior<HealthProtocol.Message> behavior(final Instant startInstant, final Clock clock, final Map<String, JsonNode> staticProperties) {
         return Behaviors.setup(context -> new HealthActor(context,
-            requireNonNull(startInstant),
-            requireNonNull(clock)));
+                requireNonNull(startInstant),
+                requireNonNull(clock),
+                requireNonNull(staticProperties)));
     }
 
-    private HealthActor(final ActorContext<HealthProtocol.Message> context, final Instant startInstant, final Clock clock) {
+    private HealthActor(final ActorContext<HealthProtocol.Message> context, final Instant startInstant, final Clock clock, final Map<String, JsonNode> staticProperties) {
         super(context);
         this.startDateTime = ZonedDateTime.ofInstant(startInstant, ZoneId.systemDefault());
         this.clock = clock;
+        this.staticProperties = staticProperties;
     }
 
     @Override
     public Receive<HealthProtocol.Message> createReceive() {
         return ReceiveBuilder.<HealthProtocol.Message>create()
-            .onMessage(HealthProtocol.GetHealth.class, this::onGetHealth)
-            .onMessage(HealthProtocol.RegisterBlock.class, this::onRegisterBlock)
-            .onMessage(HealthProtocol.UpdateBlockStatus.class, this::onUpdateBlockStatus)
-            .onMessage(HealthProtocol.RegisterComponent.class, this::onRegisterComponent)
-            .onMessage(HealthProtocol.UpdateComponentHealth.class, this::onUpdateComponentHealth)
-            .build();
+                .onMessage(HealthProtocol.GetHealth.class, this::onGetHealth)
+                .onMessage(HealthProtocol.RegisterBlock.class, this::onRegisterBlock)
+                .onMessage(HealthProtocol.UpdateBlockStatus.class, this::onUpdateBlockStatus)
+                .onMessage(HealthProtocol.RegisterComponent.class, this::onRegisterComponent)
+                .onMessage(HealthProtocol.UpdateComponentHealth.class, this::onUpdateComponentHealth)
+                .build();
     }
 
     private Behavior<HealthProtocol.Message> onGetHealth(final HealthProtocol.GetHealth m) {
         boolean isHealthy = blocks.values().stream()
-            .filter(b -> b.mandatory)
-            .allMatch(b -> b.status == BlockStatus.INITIALIZED);
+                .filter(b -> b.mandatory)
+                .allMatch(b -> b.status == BlockStatus.INITIALIZED);
 
         final Pair<Boolean, Boolean> isHealthyAndInitialized = Pair.create(isHealthy, true);
 
         final Pair<Boolean, Boolean> finalHealthAndInitialized = dependencies.values().stream()
-            .map(d -> Pair.create(d.isHealthy, d.isInitialized))
-            .reduce(isHealthyAndInitialized, HEALTH_INFO_REDUCE_OPERATOR);
-        final ServiceHealth serviceHealth = new ServiceHealth(finalHealthAndInitialized.first(), finalHealthAndInitialized.second(), blocks, new ArrayList<>(dependencies.values()), startDateTime, getNow());
+                .map(d -> Pair.create(d.isHealthy, d.isInitialized))
+                .reduce(isHealthyAndInitialized, HEALTH_INFO_REDUCE_OPERATOR);
+        final ServiceHealth serviceHealth = new ServiceHealth(finalHealthAndInitialized.first(), finalHealthAndInitialized.second(), blocks, new ArrayList<>(dependencies.values()), startDateTime, getNow(), staticProperties);
         m.replyTo.tell(new HealthProtocol.Health(serviceHealth));
         return Behaviors.same();
     }

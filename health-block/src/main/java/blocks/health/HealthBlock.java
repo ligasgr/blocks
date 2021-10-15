@@ -7,6 +7,7 @@ import blocks.service.Block;
 import blocks.service.BlockContext;
 import blocks.service.BlockRef;
 import blocks.service.BlockStatus;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 
 import java.util.Collections;
@@ -22,6 +23,15 @@ public class HealthBlock extends AbstractBlock<ActorRef<HealthProtocol.Message>>
     private Logger log;
     private HealthRestService healthRestService;
     private Map<BlockRef<?>, Block<?>> blocks;
+    private final Map<String, JsonNode> staticProperties;
+
+    public HealthBlock() {
+        this(Collections.emptyMap());
+    }
+
+    public HealthBlock(final Map<String, JsonNode> staticProperties) {
+        this.staticProperties = staticProperties;
+    }
 
     @Override
     public boolean isMandatory() {
@@ -32,7 +42,7 @@ public class HealthBlock extends AbstractBlock<ActorRef<HealthProtocol.Message>>
     protected CompletableFuture<ActorRef<HealthProtocol.Message>> getBlockOutputFuture(final BlockContext blockContext) {
         this.log = blockContext.context.getLog();
         this.log.info("Initializing HealthBlock");
-        ActorRef<HealthProtocol.Message> healthActor = blockContext.context.spawn(HealthActor.behavior(blockContext.startInstant, blockContext.clock), "healthActor");
+        ActorRef<HealthProtocol.Message> healthActor = blockContext.context.spawn(HealthActor.behavior(blockContext.startInstant, blockContext.clock, staticProperties), "healthActor");
         healthRestService = new HealthRestService(healthActor, blockContext.context.getSystem().scheduler());
         for (Map.Entry<BlockRef<?>, Block<?>> block : blocks.entrySet()) {
             healthActor.tell(new HealthProtocol.RegisterBlock(block.getKey().key, block.getValue().isMandatory()));

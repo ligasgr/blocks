@@ -4,6 +4,8 @@ import akka.actor.testkit.typed.javadsl.TestProbe;
 import akka.actor.typed.ActorRef;
 import blocks.service.BlockStatus;
 import blocks.testkit.BlockTestBase;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -14,6 +16,8 @@ import org.mockito.MockitoAnnotations;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZonedDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 
@@ -35,9 +39,14 @@ class HealthActorTest extends BlockTestBase {
 
     private static final Instant START_TIME = NOW.minusSeconds(10L);
     private static final ZonedDateTime ZONED_START_TIME = ZonedDateTime.ofInstant(START_TIME, ZONE_ID);
+    private static final Map<String, JsonNode> STATIC_PROPERTIES = new HashMap<String, JsonNode>() {
+        {
+            this.put("serviceName", TextNode.valueOf("test-service"));
+        }
+    };
 
     private static final HealthProtocol.Health EXPECTED_INITIAL_HEALTH = new HealthProtocol.Health(
-        new ServiceHealth(true, true, emptyMap(), emptyList(), ZONED_START_TIME, ZONED_NOW)
+        new ServiceHealth(true, true, emptyMap(), emptyList(), ZONED_START_TIME, ZONED_NOW, STATIC_PROPERTIES)
     );
 
     private TestProbe<HealthProtocol.Health> testProbe;
@@ -54,7 +63,7 @@ class HealthActorTest extends BlockTestBase {
         when(clock.instant()).thenReturn(NOW);
         when(clock.getZone()).thenReturn(ZONE_ID);
 
-        healthActor = spawnActor(HealthActor.behavior(START_TIME, clock), "HealthActor");
+        healthActor = spawnActor(HealthActor.behavior(START_TIME, clock, STATIC_PROPERTIES), "HealthActor");
     }
 
     @Test
@@ -71,7 +80,7 @@ class HealthActorTest extends BlockTestBase {
         final HealthProtocol.Health expectedUpdatedHealth = new HealthProtocol.Health(
             new ServiceHealth(false, true, singletonMap(
                 "TestBlock", new BlockHealthInfo(BlockStatus.NOT_INITIALIZED, true)
-            ), emptyList(), ZONED_START_TIME, ZONED_NOW)
+            ), emptyList(), ZONED_START_TIME, ZONED_NOW, STATIC_PROPERTIES)
         );
 
         healthActor.tell(new HealthProtocol.GetHealth(testProbe.ref()));
@@ -107,7 +116,7 @@ class HealthActorTest extends BlockTestBase {
         final HealthProtocol.Health testComponent = new HealthProtocol.Health(
             new ServiceHealth(false, false, emptyMap(),
                 singletonList(new ComponentHealth("TestComponent", false, false, Optional.empty(), emptyList(), ZONED_NOW, OptionalLong.empty())),
-                ZONED_START_TIME, ZONED_NOW));
+                ZONED_START_TIME, ZONED_NOW, STATIC_PROPERTIES));
 
         healthActor.tell(new HealthProtocol.GetHealth(testProbe.ref()));
         testProbe.expectMessage(IN_AT_MOST_THREE_SECONDS, EXPECTED_INITIAL_HEALTH);
@@ -126,7 +135,7 @@ class HealthActorTest extends BlockTestBase {
         final HealthProtocol.Health expectedUpdatedHealth = new HealthProtocol.Health(
             new ServiceHealth(expectedHealthyValue, true, singletonMap(
                 "TestBlock", new BlockHealthInfo(blockStatus, mandatory)
-            ), emptyList(), ZONED_START_TIME, ZONED_NOW)
+            ), emptyList(), ZONED_START_TIME, ZONED_NOW, STATIC_PROPERTIES)
         );
 
         healthActor.tell(new HealthProtocol.RegisterBlock("TestBlock", mandatory));

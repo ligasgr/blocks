@@ -10,7 +10,7 @@ dependencies {
     api group: 'com.typesafe.akka', name: "akka-actor_${scalaBinaryVersion}", version: akkaTypedVersion
     api group: 'com.typesafe.akka', name: "akka-actor-typed_${scalaBinaryVersion}", version: akkaTypedVersion
     api group: 'ch.megard', name: "akka-http-cors_${scalaBinaryVersion}", version: '1.1.1'
-    api group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.12.2'
-    api group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jdk8', version: '2.12.2'
-    api group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: '2.12.2'
+    api group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.12.3'
+    api group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jdk8', version: '2.12.3'
+    api group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: '2.12.3'
 }
