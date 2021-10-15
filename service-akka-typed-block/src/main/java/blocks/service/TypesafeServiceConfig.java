@@ -1,5 +1,6 @@
 package blocks.service;
 
+import akka.japi.Pair;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -12,18 +13,33 @@ import java.util.stream.Collectors;
 
 public class TypesafeServiceConfig implements ServiceConfig {
 
-    private final Config config;
-    private final String env;
-
-    public TypesafeServiceConfig() {
-        Config envConfig = ConfigFactory.systemEnvironment()
+    public static Pair<String, Config> getDefaultEnvAndConfig() {
+        final Config envConfig = ConfigFactory.systemEnvironment()
                 .withFallback(ConfigFactory.parseResourcesAnySyntax("env.conf"))
                 .resolve();
-        env = envConfig.getString("ENV");
-        this.config = envConfig
+        final String env = envConfig.getString("ENV");
+        final Config resolved = envConfig
                 .withFallback(ConfigFactory.parseResourcesAnySyntax(env + ".conf"))
                 .withFallback(ConfigFactory.defaultReference())
                 .resolve();
+        return Pair.create(env, resolved);
+    }
+
+    private final Config config;
+
+    private final String env;
+
+    public TypesafeServiceConfig() {
+        this(getDefaultEnvAndConfig());
+    }
+
+    public TypesafeServiceConfig(final Pair<String, Config> envAndConfig) {
+        this(envAndConfig.first(), envAndConfig.second());
+    }
+
+    public TypesafeServiceConfig(final String env, final Config config) {
+        this.env = env;
+        this.config = config;
     }
 
     @Override

@@ -75,6 +75,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.models.info.Contact;
+import io.swagger.v3.oas.models.info.Info;
 import org.bson.Document;
 import org.slf4j.Logger;
 import reactor.core.publisher.Flux;
@@ -117,13 +119,24 @@ public class Main {
         Function<BlockContext, Routes> routesCreator = (context) -> new DirectiveRoutes(context, secretsConfigBlockRef, rdbmsBlockRef, couchbaseBlockRef, fileStorageBlockRef, mongoBlockRef, jmsBlockRef);
         Function<BlockContext, WebSocketMessageHandler> wsHandlerCreator = (context) -> new WsHandler(context.context.getLog());
         BlockRef<KeyStore> keyStoreBlockRef = KeystoreBlock.getRef("httpsKeystore");
-        final Map<String, JsonNode> staticProperties = new HashMap<>();
+        Map<String, JsonNode> staticProperties = new HashMap<>();
         staticProperties.put("serviceName", TextNode.valueOf("app-example"));
+        TypesafeServiceConfig config = new TypesafeServiceConfig();
+        Info info = new Info()
+                .title("example app - " + config.getEnv())
+                .description("<p>" +
+                        "Simple akka-http application. "+
+                        "<table>" +
+                        "<tr><th>ENV</th><td>" + config.getEnv() +"</td></tr>"+
+                        "</table>" +
+                        "</p>")
+                .contact(new Contact().name("Developer").email("dev@blocks"))
+                .version("1.0");
         ServiceBuilder.newService()
                 .withBlock(keyStoreBlockRef, new KeystoreBlock("PKCS12", "p12", "https.keystore.password", secretsConfigBlockRef), secretsConfigBlockRef)
                 .withBlock(HttpsBlock.getRef("https"), new HttpsBlock(keyStoreBlockRef, "https.keystore.password", secretsConfigBlockRef), keyStoreBlockRef, secretsConfigBlockRef)
                 .withBlock(healthBlockRef, new HealthBlock(staticProperties))
-                .withBlock(SwaggerBlock.getRef("swagger"), new SwaggerBlock())
+                .withBlock(SwaggerBlock.getRef("swagger"), new SwaggerBlock(info))
                 .withBlock(SwaggerUiBlock.getRef("swagger-ui"), new SwaggerUiBlock())
                 .withBlock(UiBlock.getRef("ui"), new UiBlock())
                 .withBlock(WebSocketBlock.getRef("ws"), new WebSocketBlock(wsHandlerCreator, "ws", "ws"))
@@ -134,7 +147,7 @@ public class Main {
                 .withBlock(fileStorageBlockRef, new FileStorageBlock("storage"))
                 .withBlock(jmsBlockRef, new JmsBlock(healthBlockRef, "activemq", Optional.of(blockContext -> blockContext.getBlockOutput(secretsConfigBlockRef).getSecret("activemq.securityCredentials"))), healthBlockRef, secretsConfigBlockRef)
                 .withBlock(RestEndpointsBlock.getRef("rest"), new RestEndpointsBlock(routesCreator, Collections.singleton(DirectiveRoutes.class), healthBlockRef), healthBlockRef, secretsConfigBlockRef, rdbmsBlockRef, couchbaseBlockRef, fileStorageBlockRef, mongoBlockRef, jmsBlockRef)
-                .start(Clock.systemDefaultZone(), new TypesafeServiceConfig());
+                .start(Clock.systemDefaultZone(), config);
     }
 
     @Path("")

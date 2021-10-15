@@ -16,9 +16,17 @@ import java.util.Optional;
 import java.util.Set;
 
 import static akka.http.javadsl.server.PathMatchers.segment;
+import static scala.jdk.javaapi.CollectionConverters.asScala;
 
 public class SwaggerDocService extends AllDirectives {
     private final Set<Class<?>> apiClasses = new HashSet<>();
+    private final Info info;
+    private final String basePath;
+
+    public SwaggerDocService(final Info info, final String basePath) {
+        this.info = info;
+        this.basePath = basePath;
+    }
 
     private final SwaggerGenerator generator = new SwaggerGenerator() {
         private Converter converter;
@@ -31,7 +39,7 @@ public class SwaggerDocService extends AllDirectives {
                         converter = new Converter(this) {
                             @Override
                             public scala.collection.immutable.List<String> schemes() {
-                                return scala.collection.immutable.List.<String>newBuilder().result();
+                                return asScala(generator.schemes()).toList();
                             }
                         };
                     }
@@ -52,12 +60,12 @@ public class SwaggerDocService extends AllDirectives {
 
         @Override
         public String basePath() {
-            return "/";
+            return basePath;
         }
 
         @Override
         public Info info() {
-            return new Info().description("Simple akka-http application").version("1.0");
+            return info;
         }
 
         @Override
