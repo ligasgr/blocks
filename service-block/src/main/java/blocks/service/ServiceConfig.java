@@ -24,5 +24,7 @@ public interface ServiceConfig {
 
     Map<String, String> getStringMap(String path);
 
+    boolean getBoolean(String path);
+
     BlockConfig getBlockConfig(String path);
 }

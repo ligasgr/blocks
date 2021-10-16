@@ -91,6 +91,11 @@ public class TypesafeServiceConfig implements ServiceConfig {
     }
 
     @Override
+    public boolean getBoolean(final String path) {
+        return config.getBoolean(path);
+    }
+
+    @Override
     public BlockConfig getBlockConfig(String path) {
         return new TypesafeBlockConfig(config.getConfig(path));
     }

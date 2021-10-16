@@ -46,4 +46,9 @@ public class TypesafeBlockConfig implements BlockConfig {
         return Collections.unmodifiableMap(configConfig.entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> configConfig.getString(e.getKey()))));
     }
+
+    @Override
+    public boolean getBoolean(final String path) {
+        return config.getBoolean(path);
+    }
 }

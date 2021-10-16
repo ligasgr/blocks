@@ -16,4 +16,6 @@ public interface BlockConfig {
     List<String> getStringList(final String path);
 
     Map<String, String> getStringMap(String path);
+
+    boolean getBoolean(String path);
 }
