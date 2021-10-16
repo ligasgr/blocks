@@ -1,0 +1,14 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'signing'
+}
+
+dependencies {
+    api 'com.couchbase.client:java-client:2.7.21'
+    api 'io.reactivex:rxjava-reactive-streams:1.2.1'
+    api project(':service-block')
+    implementation 'net.jodah:failsafe:2.4.4'
+    implementation project(':health-block')
+    implementation project(':secrets-config-block')
+}

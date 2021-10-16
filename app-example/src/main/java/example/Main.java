@@ -1,6 +1,7 @@
 package example;
 
 
+import akka.Done;
 import akka.NotUsed;
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.ActorSystem;
@@ -19,6 +20,7 @@ import akka.http.javadsl.server.Route;
 import akka.http.javadsl.unmarshalling.Unmarshaller;
 import akka.japi.Pair;
 import akka.japi.function.Procedure;
+import akka.stream.Materializer;
 import akka.stream.OverflowStrategy;
 import akka.stream.alpakka.jms.JmsMessage;
 import akka.stream.alpakka.jms.JmsProducerSettings;
@@ -31,7 +33,8 @@ import akka.stream.javadsl.Sink;
 import akka.stream.javadsl.Source;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import akka.util.ByteString;
-import blocks.couchbase.CouchbaseBlock;
+//import blocks.couchbase.CouchbaseBlock;
+import blocks.couchbase.sdk2.CouchbaseSdk2Block;
 import blocks.health.HealthBlock;
 import blocks.health.HealthProtocol;
 import blocks.https.HttpsBlock;
@@ -47,6 +50,7 @@ import blocks.rest.Routes;
 import blocks.secrets.config.SecretsConfigBlock;
 import blocks.service.BlockContext;
 import blocks.service.BlockRef;
+import blocks.service.JsonUtil;
 import blocks.service.RequestMetricsLogging;
 import blocks.service.SecretsConfig;
 import blocks.service.ServiceBuilder;
@@ -59,9 +63,15 @@ import blocks.swagger.ui.SwaggerUiBlock;
 import blocks.ui.UiBlock;
 import blocks.websocket.WebSocketBlock;
 import blocks.websocket.WebSocketMessageHandler;
-import com.couchbase.client.java.ReactiveCluster;
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.AsyncCluster;
+import com.couchbase.client.java.Cluster;
+//import com.couchbase.client.java.ReactiveCluster;
+import com.couchbase.client.java.document.json.JsonObject;
+//import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.query.N1qlQuery;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.mongodb.reactivestreams.client.FindPublisher;
 import com.mongodb.reactivestreams.client.MongoClient;
@@ -80,8 +90,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import org.bson.Document;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import reactor.core.publisher.Flux;
+import rx.RxReactiveStreams;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -99,6 +111,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -107,15 +120,19 @@ import java.util.function.Function;
 import static akka.http.javadsl.server.PathMatchers.integerSegment;
 import static akka.http.javadsl.server.PathMatchers.remaining;
 import static akka.http.javadsl.server.PathMatchers.segment;
-import static com.couchbase.client.java.query.QueryOptions.queryOptions;
+//import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 
 public class Main {
+
+    public static final ObjectReader OBJECT_READER = JsonUtil.DEFAULT_OBJECT_MAPPER.reader();
+
     public static void main(String[] args) {
         BlockRef<ActorRef<HealthProtocol.Message>> healthBlockRef = HealthBlock.getRef("health");
         BlockRef<SecretsConfig> secretsConfigBlockRef = SecretsConfigBlock.getRef("secrets-config");
         BlockRef<ConnectionPool> rdbmsBlockRef = RdbmsBlock.getRef("rdbms-db");
-        BlockRef<ReactiveCluster> couchbaseBlockRef = CouchbaseBlock.getRef("couchbase");
-        BlockRef<MongoClient> mongoBlockRef = CouchbaseBlock.getRef("mongo");
+//        BlockRef<ReactiveCluster> couchbaseBlockRef = CouchbaseBlock.getRef("couchbase");
+        BlockRef<Cluster> couchbaseBlockRef = CouchbaseSdk2Block.getRef("couchbase");
+        BlockRef<MongoClient> mongoBlockRef = MongoBlock.getRef("mongo");
         BlockRef<Storage> fileStorageBlockRef = FileStorageBlock.getRef("fs");
         BlockRef<JmsObjectFactory> jmsBlockRef = JmsBlock.getRef("jms-activemq");
         Function<BlockContext, Routes> routesCreator = (context) -> new DirectiveRoutes(context, secretsConfigBlockRef, rdbmsBlockRef, couchbaseBlockRef, fileStorageBlockRef, mongoBlockRef, jmsBlockRef);
@@ -142,7 +159,8 @@ public class Main {
                 .withBlock(SwaggerUiBlock.getRef("swagger-ui"), new SwaggerUiBlock())
                 .withBlock(UiBlock.getRef("ui"), new UiBlock())
                 .withBlock(WebSocketBlock.getRef("ws"), new WebSocketBlock(wsHandlerCreator, "ws", "ws"))
-                .withBlock(couchbaseBlockRef, new CouchbaseBlock(healthBlockRef, secretsConfigBlockRef, "couchbase"), healthBlockRef, secretsConfigBlockRef)
+//                .withBlock(couchbaseBlockRef, new CouchbaseBlock(healthBlockRef, secretsConfigBlockRef, "couchbase"), healthBlockRef, secretsConfigBlockRef)
+                .withBlock(couchbaseBlockRef, new CouchbaseSdk2Block(healthBlockRef, secretsConfigBlockRef, "couchbase"), healthBlockRef, secretsConfigBlockRef)
                 .withBlock(mongoBlockRef, new MongoBlock(healthBlockRef, secretsConfigBlockRef, "mongo"), healthBlockRef, secretsConfigBlockRef)
                 .withBlock(secretsConfigBlockRef, new SecretsConfigBlock())
                 .withBlock(rdbmsBlockRef, new RdbmsBlock(healthBlockRef, secretsConfigBlockRef, "db"), healthBlockRef, secretsConfigBlockRef)
@@ -159,7 +177,8 @@ public class Main {
         final AtomicInteger count = new AtomicInteger(0);
         private final SecretsConfig secretsConfig;
         private final ConnectionPool connectionPool;
-        private final ReactiveCluster reactiveCluster;
+//        private final ReactiveCluster reactiveCluster;
+        private final AsyncCluster asyncCluster;
         private final Storage storage;
         private final MongoClient mongoClient;
         private final ConcurrentLinkedQueue<String> messages = new ConcurrentLinkedQueue<>();
@@ -168,17 +187,20 @@ public class Main {
         public DirectiveRoutes(final BlockContext context,
                                final BlockRef<SecretsConfig> secretsConfigBlockRef,
                                final BlockRef<ConnectionPool> rdbmsBlockRef,
-                               final BlockRef<ReactiveCluster> couchbaseBlockRef,
+//                               final BlockRef<ReactiveCluster> couchbaseBlockRef,
+                               final BlockRef<Cluster> couchbaseBlockRef,
                                final BlockRef<Storage> fileStorageBlockRef,
                                final BlockRef<MongoClient> mongoBlockRef,
                                final BlockRef<JmsObjectFactory> jmsBlockRef) {
             secretsConfig = context.getBlockOutput(secretsConfigBlockRef);
             connectionPool = context.getBlockOutput(rdbmsBlockRef);
-            reactiveCluster = context.getBlockOutput(couchbaseBlockRef);
+            asyncCluster = context.getBlockOutput(couchbaseBlockRef).async();
             mongoClient = context.getBlockOutput(mongoBlockRef);
             storage = context.getBlockOutput(fileStorageBlockRef);
             final JmsObjectFactory jmsObjectFactory = context.getBlockOutput(jmsBlockRef);
             String queueName = "test";
+            ActorSystem<Void> system = context.context.getSystem();
+            final Materializer abc = Materializer.matFromSystem(system);
             jmsObjectFactory.<String>getConsumer(queueName, s -> JmsConsumer.textSource(s.withBufferSize(10).withQueue(queueName)))
                     .runWith(Sink.foreach(messages::add), context.context.getSystem());
             final Sink<String, NotUsed> messagesSink = jmsObjectFactory.<String>getProducer(queueName, s -> {
@@ -316,8 +338,11 @@ public class Main {
         })
         public Route getCouchbaseValues() {
             return path(segment("couchbase").slash("v1").slash(integerSegment()), (count) -> get(() -> {
-                Flux<Object> publisher = reactiveCluster.query("select * from `beer-sample` where `type`='brewery' and `state` = 'California' limit $count", queryOptions().parameters(JsonObject.create().put("count", count)))
-                        .flatMapMany(r -> r.rowsAs(JsonNode.class));
+//                Flux<Object> publisher = reactiveCluster.query("select * from `beer-sample` where `type`='brewery' and `state` = 'California' limit $count", queryOptions().parameters(JsonObject.create().put("count", count)))
+//                        .flatMapMany(r -> r.rowsAs(JsonNode.class));
+//                return completeOKWithSource(Source.fromPublisher(publisher), Jackson.marshaller(), EntityStreamingSupport.json());
+                Publisher<Object> publisher = RxReactiveStreams.toPublisher(asyncCluster.query(N1qlQuery.parameterized("select * from `beer-sample` where `type`='brewery' and `state` = 'California' limit $count", JsonObject.create().put("count", count)))
+                        .flatMap(rs -> rs.rows().<Object>map(asyncN1qlQueryRow -> getJsonNode(new String(asyncN1qlQueryRow.byteValue())))));
                 return completeOKWithSource(Source.fromPublisher(publisher), Jackson.marshaller(), EntityStreamingSupport.json());
             }));
         }
@@ -437,6 +462,14 @@ public class Main {
             });
 
             return new RestEndpointsSmokeTests(system, tests);
+        }
+    }
+
+    private static JsonNode getJsonNode(final String json) {
+        try {
+            return OBJECT_READER.readTree(json);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException(e);
         }
     }
 
