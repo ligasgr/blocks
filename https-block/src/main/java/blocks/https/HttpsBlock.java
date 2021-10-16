@@ -11,11 +11,11 @@ import akka.http.javadsl.settings.ServerSettings;
 import akka.http.javadsl.settings.WebSocketSettings;
 import akka.stream.javadsl.Flow;
 import akka.util.ByteString;
-import blocks.secrets.config.SecretsConfig;
 import blocks.service.AbstractBlock;
 import blocks.service.BlockContext;
 import blocks.service.BlockRef;
 import blocks.service.FutureUtils;
+import blocks.service.SecretsConfig;
 import org.slf4j.Logger;
 
 import java.security.KeyStore;

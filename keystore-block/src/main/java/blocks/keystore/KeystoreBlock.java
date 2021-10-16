@@ -1,10 +1,10 @@
 package blocks.keystore;
 
-import blocks.secrets.config.SecretsConfig;
 import blocks.service.AbstractBlock;
 import blocks.service.BlockContext;
 import blocks.service.BlockRef;
 import blocks.service.FutureUtils;
+import blocks.service.SecretsConfig;
 
 import java.io.IOException;
 import java.io.InputStream;

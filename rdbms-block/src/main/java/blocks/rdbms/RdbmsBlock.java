@@ -2,13 +2,13 @@ package blocks.rdbms;
 
 import akka.actor.typed.ActorRef;
 import blocks.health.HealthProtocol;
-import blocks.secrets.config.SecretsConfig;
 import blocks.service.AbstractBlock;
 import blocks.service.Block;
 import blocks.service.BlockConfig;
 import blocks.service.BlockContext;
 import blocks.service.BlockRef;
 import blocks.service.FutureUtils;
+import blocks.service.SecretsConfig;
 import io.r2dbc.pool.ConnectionPool;
 import io.r2dbc.pool.ConnectionPoolConfiguration;
 import io.r2dbc.spi.Connection;

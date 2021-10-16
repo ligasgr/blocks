@@ -1,13 +1,14 @@
 package blocks.secrets.config;
 
+import blocks.service.SecretsConfig;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
-public class SecretsConfig {
+public class TypesafeSecretsConfig implements SecretsConfig {
     private final Config config;
     private final String secretsConfigFile;
 
-    public SecretsConfig(final String env) {
+    public TypesafeSecretsConfig(final String env) {
         this.secretsConfigFile = env + "-secrets.conf";
         this.config = ConfigFactory.parseResourcesAnySyntax(secretsConfigFile).resolve();
         EncryptionUtil.encrypt("sample");

@@ -2,13 +2,13 @@ package blocks.mongo;
 
 import akka.actor.typed.ActorRef;
 import blocks.health.HealthProtocol;
-import blocks.secrets.config.SecretsConfig;
 import blocks.service.AbstractBlock;
 import blocks.service.Block;
 import blocks.service.BlockConfig;
 import blocks.service.BlockContext;
 import blocks.service.BlockRef;
 import blocks.service.FutureUtils;
+import blocks.service.SecretsConfig;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoCredential;
 import com.mongodb.ServerAddress;
