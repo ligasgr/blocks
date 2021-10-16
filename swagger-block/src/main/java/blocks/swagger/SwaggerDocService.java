@@ -94,6 +94,11 @@ public class SwaggerDocService extends AllDirectives {
         }
 
         @Override
+        public List<String> schemes() {
+            return Collections.emptyList();
+        }
+
+        @Override
         public String generateSwaggerYaml() {
             return converter().generateSwaggerYaml();
         }
