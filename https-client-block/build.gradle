@@ -1,0 +1,12 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'signing'
+}
+
+dependencies {
+    api group: 'com.typesafe.akka', name: "akka-stream_${scalaBinaryVersion}", version: akkaTypedVersion
+    api project(':service-block')
+    implementation project(':keystore-block')
+    implementation project(':secrets-config-block')
+}
