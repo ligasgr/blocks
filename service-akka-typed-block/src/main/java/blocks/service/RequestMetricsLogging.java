@@ -13,42 +13,45 @@ import akka.http.javadsl.server.RouteResults;
 import akka.stream.javadsl.Flow;
 import akka.util.ByteString;
 
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class RequestMetricsLogging {
-    public static Route logRequests(final LoggingAdapter log, final Supplier<Route> route) {
+    public static final Function<RequestLoggingDetails, String> DEFAULT_MESSAGE_FUNCTION = RequestMetricsLogging::prepareMessage;
+
+    public static Route logRequests(final LoggingAdapter log, final Function<RequestLoggingDetails, String> messageFunction, final Supplier<Route> route) {
         return Directives.extractClientIP(address ->
                 Directives.extractRequestContext(requestContext -> {
                     final long start = System.nanoTime();
                     return Directives.mapRouteResult(routeResult ->
-                                    logRequestAndMaybeChangeRouteResult(log, address, requestContext, routeResult, start),
+                                    logRequestAndMaybeChangeRouteResult(log, messageFunction, address, requestContext, routeResult, start),
                             route);
                 })
         );
     }
 
-    private static RouteResult logRequestAndMaybeChangeRouteResult(final LoggingAdapter log, final RemoteAddress address, final RequestContext requestContext, final RouteResult routeResult, final long start) {
+    private static RouteResult logRequestAndMaybeChangeRouteResult(final LoggingAdapter log, final Function<RequestLoggingDetails, String> messageFunction, final RemoteAddress address, final RequestContext requestContext, final RouteResult routeResult, final long start) {
         HttpRequest request = requestContext.getRequest();
         if (routeResult instanceof Complete) {
             HttpResponse response = ((Complete) routeResult).getResponse();
             if (response.entity().isKnownEmpty() || !response.entity().isChunked()) {
-                logRequest(log, address, start, request, response.status().intValue(), false);
+                logRequest(log, messageFunction, address, start, request, response.status().intValue(), false);
                 return routeResult;
             } else {
-                return logRequestAfterStreamingCompletion(log, address, start, request, response);
+                return logRequestAfterStreamingCompletion(log, messageFunction, address, start, request, response);
             }
         }
         return routeResult;
     }
 
-    private static Complete logRequestAfterStreamingCompletion(final LoggingAdapter log, final RemoteAddress address, final long start, final HttpRequest request, final HttpResponse response) {
+    private static Complete logRequestAfterStreamingCompletion(final LoggingAdapter log, final Function<RequestLoggingDetails, String> messageFunction, final RemoteAddress address, final long start, final HttpRequest request, final HttpResponse response) {
         HttpResponse modifiedResponse = response.transformEntityDataBytes(Flow.<ByteString>create()
                 .watchTermination((materialization, futureDone) -> {
                     futureDone.whenComplete((done, throwable) -> {
                         if (throwable != null) {
                             log.error(throwable, "Request failed");
                         }
-                        logRequest(log, address, start, request, response.status().intValue(), true);
+                        logRequest(log, messageFunction, address, start, request, response.status().intValue(), true);
                     });
                     return materialization;
                 })
@@ -56,22 +59,27 @@ public class RequestMetricsLogging {
         return RouteResults.complete(modifiedResponse);
     }
 
-    private static void logRequest(final LoggingAdapter log, final RemoteAddress address, final long start, final HttpRequest request, final int statusCode, final boolean streamed) {
+    private static void logRequest(final LoggingAdapter log, final Function<RequestLoggingDetails, String> messageFunction, final RemoteAddress address, final long start, final HttpRequest request, final int statusCode, final boolean streamed) {
         if (log.isInfoEnabled()) {
-            final String template = "HttpRequest" +
-                    " method=%s" +
-                    " uri=\"%s\"" +
-                    " clientIp=%s" +
-                    " status=%d" +
-                    " timeToRespondInNano=%d" +
-                    " streamed=%s";
-            final String message = String.format(template, request.method().name(),
-                    request.getUri(),
-                    address,
-                    statusCode,
-                    System.nanoTime() - start,
-                    streamed);
-            log.info(message);
+            long timeInNano = System.nanoTime() - start;
+            RequestLoggingDetails details = new RequestLoggingDetails(address, request, statusCode, streamed, timeInNano);
+            log.info(messageFunction.apply(details));
         }
+    }
+
+    private static String prepareMessage(RequestLoggingDetails details) {
+        final String template = "HttpRequest" +
+                " method=%s" +
+                " uri=\"%s\"" +
+                " clientIp=%s" +
+                " status=%d" +
+                " timeToRespondInNano=%d" +
+                " streamed=%s";
+        return String.format(template, details.request.method().name(),
+                details.request.getUri(),
+                details.address,
+                details.statusCode,
+                details.timeInNano,
+                details.streamed);
     }
 }

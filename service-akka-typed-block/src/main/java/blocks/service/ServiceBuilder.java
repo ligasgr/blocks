@@ -1,18 +1,23 @@
 package blocks.service;
 
 import akka.actor.typed.ActorSystem;
+import akka.event.Logging;
+import akka.event.LoggingAdapter;
 
 import java.time.Clock;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 import static java.util.Arrays.asList;
 
 public class ServiceBuilder {
-    final Map<BlockRef<?>, Block<?>> blocks = new HashMap<>();
-    final Map<BlockRef<?>, Set<BlockRef<?>>> blockDependencies = new HashMap<>();
+    private final Map<BlockRef<?>, Block<?>> blocks = new HashMap<>();
+    private final Map<BlockRef<?>, Set<BlockRef<?>>> blockDependencies = new HashMap<>();
+    private Function<ActorSystem<?>, LoggingAdapter> requestsLoggerCreator = system -> Logging.getLogger(system.classicSystem(), "http-metrics");
+    private Function<RequestLoggingDetails, String> requestsMessageFunction = RequestMetricsLogging.DEFAULT_MESSAGE_FUNCTION;
 
     private ServiceBuilder() {
 
@@ -28,7 +33,17 @@ public class ServiceBuilder {
         return this;
     }
 
+    public ServiceBuilder withRequestLogger(final Function<ActorSystem<?>, LoggingAdapter> creatorFunction) {
+        this.requestsLoggerCreator = creatorFunction;
+        return this;
+    }
+
+    public ServiceBuilder withRequestsMessageFunction(final Function<RequestLoggingDetails, String> messageFunction) {
+        this.requestsMessageFunction = messageFunction;
+        return this;
+    }
+
     public ActorSystem<ServiceProtocol.Message> start(final Clock clock, final ServiceConfig config) {
-        return ActorSystem.create(ServiceActor.behavior(clock, config, blocks, blockDependencies), "service");
+        return ActorSystem.create(ServiceActor.behavior(clock, config, blocks, blockDependencies, requestsLoggerCreator, requestsMessageFunction), "service");
     }
 }

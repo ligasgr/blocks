@@ -10,7 +10,6 @@ import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
 import akka.actor.typed.javadsl.ReceiveBuilder;
-import akka.event.Logging;
 import akka.event.LoggingAdapter;
 import akka.http.javadsl.Http;
 import akka.http.javadsl.HttpTerminated;
@@ -25,7 +24,6 @@ import akka.http.javadsl.server.directives.RouteAdapter;
 import akka.http.javadsl.settings.ServerSettings;
 import akka.http.javadsl.settings.WebSocketSettings;
 import akka.stream.javadsl.Flow;
-import akka.stream.javadsl.Source;
 import akka.util.ByteString;
 import ch.megard.akka.http.cors.javadsl.settings.CorsSettings;
 import org.slf4j.Logger;
@@ -44,6 +42,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -75,15 +74,19 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
     public static Behavior<ServiceProtocol.Message> behavior(Clock clock,
                                                              ServiceConfig config,
                                                              Map<BlockRef<?>, Block<?>> blocks,
-                                                             final Map<BlockRef<?>, Set<BlockRef<?>>> blockDependencies) {
-        return Behaviors.setup(context -> new ServiceActor(context, clock, config, blocks, blockDependencies));
+                                                             final Map<BlockRef<?>, Set<BlockRef<?>>> blockDependencies,
+                                                             final Function<akka.actor.typed.ActorSystem<?>, LoggingAdapter> requestsLoggerCreator,
+                                                             final Function<RequestLoggingDetails, String> requestsMessageFunction) {
+        return Behaviors.setup(context -> new ServiceActor(context, clock, config, blocks, blockDependencies, requestsLoggerCreator, requestsMessageFunction));
     }
 
-    public ServiceActor(ActorContext<ServiceProtocol.Message> context,
-                        Clock clock,
-                        ServiceConfig config,
-                        Map<BlockRef<?>, Block<?>> blocks,
-                        final Map<BlockRef<?>, Set<BlockRef<?>>> blockDependencies) {
+    public ServiceActor(final ActorContext<ServiceProtocol.Message> context,
+                        final Clock clock,
+                        final ServiceConfig config,
+                        final Map<BlockRef<?>, Block<?>> blocks,
+                        final Map<BlockRef<?>, Set<BlockRef<?>>> blockDependencies,
+                        final Function<akka.actor.typed.ActorSystem<?>, LoggingAdapter> requestsLoggerCreator,
+                        final Function<RequestLoggingDetails, String> requestsMessageFunction) {
         super(context);
         this.clock = clock;
         this.startInstant = clock.instant();
@@ -99,8 +102,8 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
         final Route dynamicRouteAdapter = RouteAdapter.asJava(new FromJavaFunction<>(ctx -> this.dynamicRoute.get().asScala().apply(ctx)));
         final Route route = basicRoutes().orElse(dynamicRouteAdapter);
         akka.actor.typed.ActorSystem<Void> system = getContext().getSystem();
-        final LoggingAdapter metricsLog = Logging.getLogger(system.classicSystem(), "http-metrics");
-        finalRoute = RequestMetricsLogging.logRequests(metricsLog, () -> cors(settings, () -> route).seal());
+        final LoggingAdapter metricsLog = requestsLoggerCreator.apply(system);
+        finalRoute = RequestMetricsLogging.logRequests(metricsLog, requestsMessageFunction, () -> cors(settings, () -> route).seal());
         getContext().getSelf().tell(new ServiceProtocol.BindPorts(finalRoute));
         CoordinatedShutdown.get(system.classicSystem()).addJvmShutdownHook(this::shutdownBanner);
         http = Http.get(system);
