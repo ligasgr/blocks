@@ -47,6 +47,7 @@ public class CouchbaseBlock extends AbstractBlock<ReactiveCluster> {
         SecretsConfig secretsConfig = maybeSecretsConfig.get();
         BlockConfig blockConfig = blockContext.config.getBlockConfig(blockConfigPath);
         final List<String> hosts = blockConfig.getStringList("hosts");
+        final Duration queryTimeout = blockConfig.getDuration("queryTimeout");
         final Duration connectionTimeout = blockConfig.getDuration("connectionTimeout");
         final Duration waitUntilReadyTimeout = blockConfig.getDuration("waitUntilReadyTimeout");
         final String user = blockConfig.getString("user");
@@ -55,7 +56,7 @@ public class CouchbaseBlock extends AbstractBlock<ReactiveCluster> {
         ActorRef<CouchbaseHealthCheckActor.Protocol.Message> couchbaseHealthCheckActor = blockContext.context.spawn(CouchbaseHealthCheckActor.behavior(healthActor, blockContext.clock, this, blockConfigPath), "couchbaseHealthCheckActor-" + blockConfigPath);
         CompletableFuture<ReactiveCluster> resultFuture = FutureUtils.futureOnDefaultDispatcher(blockContext.context, () -> {
             final ClusterEnvironment env = ClusterEnvironment.builder()
-                    .timeoutConfig(TimeoutConfig.connectTimeout(connectionTimeout)).build();
+                    .timeoutConfig(TimeoutConfig.connectTimeout(connectionTimeout).queryTimeout(queryTimeout)).build();
             final Cluster cluster = Cluster.connect(String.join(",", hosts),
                     clusterOptions(user, password).environment(env));
             cluster.waitUntilReady(waitUntilReadyTimeout);

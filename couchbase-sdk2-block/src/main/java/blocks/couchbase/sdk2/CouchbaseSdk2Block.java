@@ -50,6 +50,9 @@ public class CouchbaseSdk2Block extends AbstractBlock<Cluster> {
         SecretsConfig secretsConfig = maybeSecretsConfig.get();
         BlockConfig blockConfig = blockContext.config.getBlockConfig(blockConfigPath);
         final List<String> hosts = blockConfig.getStringList("hosts");
+        final Duration autoreleaseAfter = blockConfig.getDuration("autoreleaseAfter");
+        final Duration queryTimeout = blockConfig.getDuration("queryTimeout");
+        final Duration maxRequestLifetime = blockConfig.getDuration("maxRequestLifetime");
         final Duration connectionTimeout = blockConfig.getDuration("connectionTimeout");
         final Duration waitUntilReadyTimeout = blockConfig.getDuration("waitUntilReadyTimeout");
         final String user = blockConfig.getString("user");
@@ -58,6 +61,9 @@ public class CouchbaseSdk2Block extends AbstractBlock<Cluster> {
         ActorRef<CouchbaseSdk2HealthCheckActor.Protocol.Message> couchbaseHealthCheckActor = blockContext.context.spawn(CouchbaseSdk2HealthCheckActor.behavior(healthActor, blockContext.clock, this, blockConfigPath), "couchbaseHealthCheckActor-" + blockConfigPath);
         CompletableFuture<Cluster> resultFuture = FutureUtils.futureOnDefaultDispatcher(blockContext.context, () -> {
             final CouchbaseEnvironment env = DefaultCouchbaseEnvironment.builder()
+                    .autoreleaseAfter(autoreleaseAfter.toMillis())
+                    .queryTimeout(queryTimeout.toMillis())
+                    .maxRequestLifetime(maxRequestLifetime.toMillis())
                     .connectTimeout(connectionTimeout.toMillis())
                     .build();
             final Policy<CouchbaseCluster> initializationPolicy = new RetryPolicy<CouchbaseCluster>()
