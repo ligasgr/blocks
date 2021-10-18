@@ -25,7 +25,7 @@ public class TypesafeServiceConfig implements ServiceConfig {
         return Pair.create(env, resolved);
     }
 
-    private final Config config;
+    final Config config;
 
     private final String env;
 

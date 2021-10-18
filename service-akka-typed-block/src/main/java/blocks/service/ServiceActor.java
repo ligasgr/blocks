@@ -26,6 +26,7 @@ import akka.http.javadsl.settings.WebSocketSettings;
 import akka.stream.javadsl.Flow;
 import akka.util.ByteString;
 import ch.megard.akka.http.cors.javadsl.settings.CorsSettings;
+import com.typesafe.config.Config;
 import org.slf4j.Logger;
 import scala.compat.java8.functionConverterImpls.FromJavaFunction;
 
@@ -212,7 +213,7 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
     }
 
     private CompletionStage<List<ServerBinding>> bindRoute(final Route route) {
-        ServerSettings settings = customServerSettings(getContext().getSystem().classicSystem());
+        ServerSettings settings = customServerSettings();
         List<Optional<CompletionStage<ServerBinding>>> maybeFutureBindings = new ArrayList<>();
         maybeFutureBindings.add(httpPort.map(port -> {
             ServerBuilder serverBuilder = http.newServerAt(host, port).withSettings(settings);
@@ -225,8 +226,9 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
                 .collect(Collectors.toList()));
     }
 
-    private ServerSettings customServerSettings(ActorSystem system) {
-        ServerSettings defaultSettings = ServerSettings.create(system);
+    private ServerSettings customServerSettings() {
+        Config config = ((TypesafeServiceConfig) this.config).config; // This is a strong assumption, ideally we'd accept any type of config and be able to convert it into Config from Typesafe
+        ServerSettings defaultSettings = ServerSettings.create(config);
         WebSocketSettings customWebSocketSettings = defaultSettings.getWebsocketSettings().withPeriodicKeepAliveData(() -> ByteString.fromString("{}"));
         return defaultSettings.withWebsocketSettings(customWebSocketSettings);
     }
