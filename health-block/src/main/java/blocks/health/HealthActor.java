@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.function.BinaryOperator;
+import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
 
@@ -30,6 +31,7 @@ public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
     private final Map<String, JsonNode> staticProperties;
     private final Map<String, ComponentHealth> dependencies = new HashMap<>();
     private final Map<String, BlockHealthInfo> blocks = new HashMap<>();
+    private final Map<String, Consumer<Pair<Boolean, ComponentHealth>>> subscribers = new HashMap<>();
 
     private static final BinaryOperator<Pair<Boolean, Boolean>> HEALTH_INFO_REDUCE_OPERATOR = (current, incoming) -> Pair.create(current.first() && incoming.first(), current.second() && incoming.second());
 
@@ -55,22 +57,26 @@ public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
                 .onMessage(HealthProtocol.UpdateBlockStatus.class, this::onUpdateBlockStatus)
                 .onMessage(HealthProtocol.RegisterComponent.class, this::onRegisterComponent)
                 .onMessage(HealthProtocol.UpdateComponentHealth.class, this::onUpdateComponentHealth)
+                .onMessage(HealthProtocol.SubscribeToHealthChangeUpdates.class, this::onSubscribe)
+                .onMessage(HealthProtocol.UnSubscribeFromHealthChangeUpdates.class, this::onUnsubscribe)
                 .build();
     }
 
     private Behavior<HealthProtocol.Message> onGetHealth(final HealthProtocol.GetHealth m) {
-        boolean isHealthy = blocks.values().stream()
-                .filter(b -> b.mandatory)
-                .allMatch(b -> b.status == BlockStatus.INITIALIZED);
-
-        final Pair<Boolean, Boolean> isHealthyAndInitialized = Pair.create(isHealthy, true);
-
-        final Pair<Boolean, Boolean> finalHealthAndInitialized = dependencies.values().stream()
-                .map(d -> Pair.create(d.isHealthy, d.isInitialized))
-                .reduce(isHealthyAndInitialized, HEALTH_INFO_REDUCE_OPERATOR);
-        final ServiceHealth serviceHealth = new ServiceHealth(finalHealthAndInitialized.first(), finalHealthAndInitialized.second(), blocks, new ArrayList<>(dependencies.values()), startDateTime, getNow(), staticProperties);
+        final Pair<Boolean, Boolean> healthyAndInitialized = getHealthyAndInitialized();
+        final ServiceHealth serviceHealth = new ServiceHealth(healthyAndInitialized.first(), healthyAndInitialized.second(), blocks, new ArrayList<>(dependencies.values()), startDateTime, getNow(), staticProperties);
         m.replyTo.tell(new HealthProtocol.Health(serviceHealth));
         return Behaviors.same();
+    }
+
+    private Pair<Boolean, Boolean> getHealthyAndInitialized() {
+        boolean allMandatoryBlocksInitialized = blocks.values().stream()
+                .filter(b -> b.mandatory)
+                .allMatch(b -> b.status == BlockStatus.INITIALIZED);
+        final Pair<Boolean, Boolean> isHealthyAndInitialized = Pair.create(allMandatoryBlocksInitialized, true);
+        return dependencies.values().stream()
+                .map(d -> Pair.create(d.isHealthy, d.isInitialized))
+                .reduce(isHealthyAndInitialized, HEALTH_INFO_REDUCE_OPERATOR);
     }
 
     private ZonedDateTime getNow() {
@@ -92,7 +98,9 @@ public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
         if (dependencies.containsKey(message.component)) {
             getContext().getLog().error("Tried to register component '{}' again", message.component);
         } else {
-            dependencies.put(message.component, new ComponentHealth(message.component, false, false, Optional.empty(), Collections.emptyList(), getNow(), OptionalLong.empty()));
+            ComponentHealth componentHealth = new ComponentHealth(message.component, false, false, Optional.empty(), Collections.emptyList(), getNow(), OptionalLong.empty());
+            dependencies.put(message.component, componentHealth);
+            notifyOfHealthChange(componentHealth);
         }
         return Behaviors.same();
     }
@@ -104,11 +112,32 @@ public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
             }
             if (dependencies.get(message.component).isHealthy != message.health.isHealthy) {
                 getContext().getLog().info("Changing health of component '{}' to '{}'", message.component, message.health.isHealthy ? "healthy" : "unhealthy");
+                notifyOfHealthChange(message.health);
             }
             dependencies.put(message.component, message.health);
         } else {
             getContext().getLog().error("Tried to update health of unregistered component '{}'", message.component);
         }
+        return Behaviors.same();
+    }
+
+    private void notifyOfHealthChange(final ComponentHealth componentHealth) {
+        if (!subscribers.isEmpty()) {
+            final Pair<Boolean, Boolean> healthyAndInitialized = getHealthyAndInitialized();
+            final Boolean healthy = healthyAndInitialized.first();
+            subscribers.forEach((subscriber, consumer) -> {
+                consumer.accept(Pair.create(healthy, componentHealth));
+            });
+        }
+    }
+
+    private Behavior<HealthProtocol.Message> onSubscribe(final HealthProtocol.SubscribeToHealthChangeUpdates message) {
+        subscribers.put(message.subscriberName, message.consumerFunction);
+        return Behaviors.same();
+    }
+
+    private Behavior<HealthProtocol.Message> onUnsubscribe(final HealthProtocol.UnSubscribeFromHealthChangeUpdates message) {
+        subscribers.remove(message.subscriberName);
         return Behaviors.same();
     }
 }

@@ -1,9 +1,11 @@
 package blocks.health;
 
 import akka.actor.typed.ActorRef;
+import akka.japi.Pair;
 import blocks.service.BlockStatus;
 
 import java.util.Objects;
+import java.util.function.Consumer;
 
 public interface HealthProtocol {
     interface Message {
@@ -61,6 +63,24 @@ public interface HealthProtocol {
         public UpdateComponentHealth(final String component, final ComponentHealth health) {
             this.component = component;
             this.health = health;
+        }
+    }
+
+    class SubscribeToHealthChangeUpdates implements Message {
+        public final String subscriberName;
+        public final Consumer<Pair<Boolean, ComponentHealth>> consumerFunction;
+
+        public SubscribeToHealthChangeUpdates(final String subscriberName, final Consumer<Pair<Boolean, ComponentHealth>> consumerFunction) {
+            this.subscriberName = subscriberName;
+            this.consumerFunction = consumerFunction;
+        }
+    }
+
+    class UnSubscribeFromHealthChangeUpdates implements Message {
+        public final String subscriberName;
+
+        public UnSubscribeFromHealthChangeUpdates(final String subscriberName) {
+            this.subscriberName = subscriberName;
         }
     }
 

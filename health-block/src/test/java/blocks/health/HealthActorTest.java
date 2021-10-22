@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static blocks.testkit.MockitoHelper.exactlyOnce;
 import static blocks.testkit.MockitoHelper.exactlyTwice;
@@ -31,6 +32,8 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -127,6 +130,101 @@ class HealthActorTest extends BlockTestBase {
         testProbe.expectMessage(IN_AT_MOST_THREE_SECONDS, testComponent);
         verify(clock, times(3)).instant();
         verify(clock, times(3)).getZone();
+    }
+
+    @Test
+    public void shouldGetUpdatedAboutHealthChangeDuringRegistrationWhenIsSubscribed() {
+        final AtomicReference<ComponentHealth> latestHealthUpdate = new AtomicReference<>();
+        ComponentHealth componentHealth = new ComponentHealth("TestComponent", false, false, Optional.empty(), emptyList(), ZONED_NOW, OptionalLong.empty());
+        final HealthProtocol.Health testComponent = new HealthProtocol.Health(
+                new ServiceHealth(false, false, emptyMap(),
+                        singletonList(componentHealth),
+                        ZONED_START_TIME, ZONED_NOW, STATIC_PROPERTIES));
+
+        healthActor.tell(new HealthProtocol.GetHealth(testProbe.ref()));
+        testProbe.expectMessage(IN_AT_MOST_THREE_SECONDS, EXPECTED_INITIAL_HEALTH);
+        healthActor.tell(new HealthProtocol.SubscribeToHealthChangeUpdates("testSubscriber", (healthyAndComponentHealth) -> {
+            assertFalse(healthyAndComponentHealth.first());
+            latestHealthUpdate.set(healthyAndComponentHealth.second());
+        }));
+
+        healthActor.tell(new HealthProtocol.RegisterComponent("TestComponent"));
+        healthActor.tell(new HealthProtocol.GetHealth(testProbe.ref()));
+
+        testProbe.expectMessage(IN_AT_MOST_THREE_SECONDS, testComponent);
+
+        assertEquals(componentHealth, latestHealthUpdate.get());
+    }
+
+    @Test
+    public void shouldGetUpdatedAboutHealthChangeDuringHealthUpdateWhenIsSubscribed() {
+        final AtomicReference<ComponentHealth> latestHealthUpdate = new AtomicReference<>();
+        ComponentHealth initialComponentHealth = new ComponentHealth("TestComponent", false, false, Optional.empty(), emptyList(), ZONED_NOW, OptionalLong.empty());
+        final HealthProtocol.Health initialComponent = new HealthProtocol.Health(
+                new ServiceHealth(false, false, emptyMap(),
+                        singletonList(initialComponentHealth),
+                        ZONED_START_TIME, ZONED_NOW, STATIC_PROPERTIES));
+        ComponentHealth updatedComponentHealth = new ComponentHealth("TestComponent", true, true, Optional.empty(), emptyList(), ZONED_NOW, OptionalLong.empty());
+        final HealthProtocol.Health updatedComponent = new HealthProtocol.Health(
+                new ServiceHealth(true, true, emptyMap(),
+                        singletonList(updatedComponentHealth),
+                        ZONED_START_TIME, ZONED_NOW, STATIC_PROPERTIES));
+
+        healthActor.tell(new HealthProtocol.GetHealth(testProbe.ref()));
+        testProbe.expectMessage(IN_AT_MOST_THREE_SECONDS, EXPECTED_INITIAL_HEALTH);
+
+        healthActor.tell(new HealthProtocol.RegisterComponent("TestComponent"));
+        healthActor.tell(new HealthProtocol.GetHealth(testProbe.ref()));
+
+        testProbe.expectMessage(IN_AT_MOST_THREE_SECONDS, initialComponent);
+
+        healthActor.tell(new HealthProtocol.SubscribeToHealthChangeUpdates("testSubscriber", (healthyAndComponentHealth) -> {
+            assertFalse(healthyAndComponentHealth.first());
+            latestHealthUpdate.set(healthyAndComponentHealth.second());
+        }));
+        healthActor.tell(new HealthProtocol.UpdateComponentHealth("TestComponent", updatedComponentHealth));
+        healthActor.tell(new HealthProtocol.GetHealth(testProbe.ref()));
+
+        testProbe.expectMessage(IN_AT_MOST_THREE_SECONDS, updatedComponent);
+
+        assertEquals(updatedComponentHealth, latestHealthUpdate.get());
+    }
+
+    @Test
+    public void shouldNoLongerGetUpdatedAboutHealthChangeWhenIsUnSubscribed() {
+        final AtomicReference<ComponentHealth> latestHealthUpdate = new AtomicReference<>();
+        ComponentHealth initialComponentHealth = new ComponentHealth("TestComponent", false, false, Optional.empty(), emptyList(), ZONED_NOW, OptionalLong.empty());
+        final HealthProtocol.Health initialComponent = new HealthProtocol.Health(
+                new ServiceHealth(false, false, emptyMap(),
+                        singletonList(initialComponentHealth),
+                        ZONED_START_TIME, ZONED_NOW, STATIC_PROPERTIES));
+        ComponentHealth updatedComponentHealth = new ComponentHealth("TestComponent", true, true, Optional.empty(), emptyList(), ZONED_NOW, OptionalLong.empty());
+        final HealthProtocol.Health updatedComponent = new HealthProtocol.Health(
+                new ServiceHealth(true, true, emptyMap(),
+                        singletonList(updatedComponentHealth),
+                        ZONED_START_TIME, ZONED_NOW, STATIC_PROPERTIES));
+
+        healthActor.tell(new HealthProtocol.GetHealth(testProbe.ref()));
+        testProbe.expectMessage(IN_AT_MOST_THREE_SECONDS, EXPECTED_INITIAL_HEALTH);
+
+        healthActor.tell(new HealthProtocol.SubscribeToHealthChangeUpdates("testSubscriber", (healthyAndComponentHealth) -> {
+            assertFalse(healthyAndComponentHealth.first());
+            latestHealthUpdate.set(healthyAndComponentHealth.second());
+        }));
+
+        healthActor.tell(new HealthProtocol.RegisterComponent("TestComponent"));
+        healthActor.tell(new HealthProtocol.GetHealth(testProbe.ref()));
+
+        testProbe.expectMessage(IN_AT_MOST_THREE_SECONDS, initialComponent);
+
+        healthActor.tell(new HealthProtocol.UnSubscribeFromHealthChangeUpdates("testSubscriber"));
+
+        healthActor.tell(new HealthProtocol.UpdateComponentHealth("TestComponent", updatedComponentHealth));
+        healthActor.tell(new HealthProtocol.GetHealth(testProbe.ref()));
+
+        testProbe.expectMessage(IN_AT_MOST_THREE_SECONDS, updatedComponent);
+
+        assertEquals(initialComponentHealth, latestHealthUpdate.get());
     }
 
     private void checkHealthWhenBlockIsInState(final boolean expectedHealthyValue,
