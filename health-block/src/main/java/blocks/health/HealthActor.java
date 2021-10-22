@@ -6,11 +6,13 @@ import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
 import akka.actor.typed.javadsl.ReceiveBuilder;
+import akka.actor.typed.javadsl.TimerScheduler;
 import akka.japi.Pair;
 import blocks.service.BlockStatus;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -23,6 +25,7 @@ import java.util.OptionalLong;
 import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 
+import static blocks.health.HealthProtocol.LOG_HEALTH;
 import static java.util.Objects.requireNonNull;
 
 public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
@@ -35,23 +38,26 @@ public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
 
     private static final BinaryOperator<Pair<Boolean, Boolean>> HEALTH_INFO_REDUCE_OPERATOR = (current, incoming) -> Pair.create(current.first() && incoming.first(), current.second() && incoming.second());
 
-    public static Behavior<HealthProtocol.Message> behavior(final Instant startInstant, final Clock clock, final Map<String, JsonNode> staticProperties) {
-        return Behaviors.setup(context -> new HealthActor(context,
+    public static Behavior<HealthProtocol.Message> behavior(final Instant startInstant, final Clock clock, final Duration healthLoggingFrequency, final Map<String, JsonNode> staticProperties) {
+        return Behaviors.setup(context -> Behaviors.withTimers(timerScheduler -> new HealthActor(context, timerScheduler,
                 requireNonNull(startInstant),
                 requireNonNull(clock),
-                requireNonNull(staticProperties)));
+                requireNonNull(healthLoggingFrequency),
+                requireNonNull(staticProperties))));
     }
 
-    private HealthActor(final ActorContext<HealthProtocol.Message> context, final Instant startInstant, final Clock clock, final Map<String, JsonNode> staticProperties) {
+    private HealthActor(final ActorContext<HealthProtocol.Message> context, final TimerScheduler<HealthProtocol.Message> timerScheduler, final Instant startInstant, final Clock clock, final Duration healthLoggingFrequency, final Map<String, JsonNode> staticProperties) {
         super(context);
         this.startDateTime = ZonedDateTime.ofInstant(startInstant, ZoneId.systemDefault());
         this.clock = clock;
         this.staticProperties = staticProperties;
+        timerScheduler.startTimerAtFixedRate(LOG_HEALTH, healthLoggingFrequency);
     }
 
     @Override
     public Receive<HealthProtocol.Message> createReceive() {
         return ReceiveBuilder.<HealthProtocol.Message>create()
+                .onMessageEquals(LOG_HEALTH, this::onLogHealth)
                 .onMessage(HealthProtocol.GetHealth.class, this::onGetHealth)
                 .onMessage(HealthProtocol.RegisterBlock.class, this::onRegisterBlock)
                 .onMessage(HealthProtocol.UpdateBlockStatus.class, this::onUpdateBlockStatus)
@@ -60,6 +66,11 @@ public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
                 .onMessage(HealthProtocol.SubscribeToHealthChangeUpdates.class, this::onSubscribe)
                 .onMessage(HealthProtocol.UnSubscribeFromHealthChangeUpdates.class, this::onUnsubscribe)
                 .build();
+    }
+
+    private Behavior<HealthProtocol.Message> onLogHealth() {
+        getContext().getLog().info("healthInfo.isHealthy={}", getHealthyAndInitialized().first());
+        return Behaviors.same();
     }
 
     private Behavior<HealthProtocol.Message> onGetHealth(final HealthProtocol.GetHealth m) {

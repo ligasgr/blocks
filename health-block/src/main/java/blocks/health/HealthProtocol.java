@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 public interface HealthProtocol {
+    LogHealth LOG_HEALTH = new LogHealth();
     interface Message {
 
     }
@@ -102,5 +103,8 @@ public interface HealthProtocol {
             this.block = block;
             this.status = status;
         }
+    }
+
+    class LogHealth implements Message {
     }
 }

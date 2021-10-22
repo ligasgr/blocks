@@ -1,5 +1,6 @@
 package blocks.health;
 
+import akka.actor.testkit.typed.javadsl.LoggingTestKit;
 import akka.actor.testkit.typed.javadsl.TestProbe;
 import akka.actor.typed.ActorRef;
 import blocks.service.BlockStatus;
@@ -14,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.HashMap;
@@ -66,11 +68,21 @@ class HealthActorTest extends BlockTestBase {
         when(clock.instant()).thenReturn(NOW);
         when(clock.getZone()).thenReturn(ZONE_ID);
 
-        healthActor = spawnActor(HealthActor.behavior(START_TIME, clock, STATIC_PROPERTIES), "HealthActor");
+        healthActor = spawnActor(HealthActor.behavior(START_TIME, clock, Duration.ofSeconds(1), STATIC_PROPERTIES), "HealthActor");
     }
 
     @Test
     public void shouldReturnHealthyAndInitializedIfNoBlocksAreRegistered() {
+        LoggingTestKit.info("healthInfo.isHealthy=true")
+                .expect(
+                        actorTestKit.system(),
+                        () -> {
+                            return null;
+                        });
+    }
+
+    @Test
+    public void shouldLogHealthStatus() {
         healthActor.tell(new HealthProtocol.GetHealth(testProbe.ref()));
 
         testProbe.expectMessage(IN_AT_MOST_THREE_SECONDS, EXPECTED_INITIAL_HEALTH);

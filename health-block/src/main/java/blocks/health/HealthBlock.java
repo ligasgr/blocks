@@ -4,12 +4,14 @@ import akka.actor.typed.ActorRef;
 import akka.http.javadsl.server.Route;
 import blocks.service.AbstractBlock;
 import blocks.service.Block;
+import blocks.service.BlockConfig;
 import blocks.service.BlockContext;
 import blocks.service.BlockRef;
 import blocks.service.BlockStatus;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.Map;
@@ -42,7 +44,9 @@ public class HealthBlock extends AbstractBlock<ActorRef<HealthProtocol.Message>>
     protected CompletableFuture<ActorRef<HealthProtocol.Message>> getBlockOutputFuture(final BlockContext blockContext) {
         this.log = blockContext.context.getLog();
         this.log.info("Initializing HealthBlock");
-        ActorRef<HealthProtocol.Message> healthActor = blockContext.context.spawn(HealthActor.behavior(blockContext.startInstant, blockContext.clock, staticProperties), "healthActor");
+        final BlockConfig healthConfig = blockContext.config.getBlockConfig("health");
+        final Duration healthLoggingFrequency = healthConfig.hasPath("healthLoggingFrequency") ? healthConfig.getDuration("healthLoggingFrequency") : Duration.ofMinutes(30);
+        ActorRef<HealthProtocol.Message> healthActor = blockContext.context.spawn(HealthActor.behavior(blockContext.startInstant, blockContext.clock, healthLoggingFrequency, staticProperties), "healthActor");
         healthRestService = new HealthRestService(healthActor, blockContext.context.getSystem().scheduler());
         for (Map.Entry<BlockRef<?>, Block<?>> block : blocks.entrySet()) {
             healthActor.tell(new HealthProtocol.RegisterBlock(block.getKey().key, block.getValue().isMandatory()));
