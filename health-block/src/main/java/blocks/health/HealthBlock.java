@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 public class HealthBlock extends AbstractBlock<ActorRef<HealthProtocol.Message>> {
+    public static final Duration DEFAULT_LOGGING_FREQUENCY = Duration.ofMinutes(30);
     private Queue<BlockRef<?>> initialisationUpdatesQueue = new LinkedList<>();
     private Logger log;
     private HealthRestService healthRestService;
@@ -44,8 +45,13 @@ public class HealthBlock extends AbstractBlock<ActorRef<HealthProtocol.Message>>
     protected CompletableFuture<ActorRef<HealthProtocol.Message>> getBlockOutputFuture(final BlockContext blockContext) {
         this.log = blockContext.context.getLog();
         this.log.info("Initializing HealthBlock");
-        final BlockConfig healthConfig = blockContext.config.getBlockConfig("health");
-        final Duration healthLoggingFrequency = healthConfig.hasPath("healthLoggingFrequency") ? healthConfig.getDuration("healthLoggingFrequency") : Duration.ofMinutes(30);
+        final Duration healthLoggingFrequency;
+        if (blockContext.config.hasPath("health")) {
+            final BlockConfig healthConfig = blockContext.config.getBlockConfig("health");
+            healthLoggingFrequency = healthConfig.hasPath("healthLoggingFrequency") ? healthConfig.getDuration("healthLoggingFrequency") : DEFAULT_LOGGING_FREQUENCY;
+        } else {
+            healthLoggingFrequency = DEFAULT_LOGGING_FREQUENCY;
+        }
         ActorRef<HealthProtocol.Message> healthActor = blockContext.context.spawn(HealthActor.behavior(blockContext.startInstant, blockContext.clock, healthLoggingFrequency, staticProperties), "healthActor");
         healthRestService = new HealthRestService(healthActor, blockContext.context.getSystem().scheduler());
         for (Map.Entry<BlockRef<?>, Block<?>> block : blocks.entrySet()) {

@@ -26,5 +26,7 @@ public interface ServiceConfig {
 
     boolean getBoolean(String path);
 
+    boolean hasPath(String path);
+
     BlockConfig getBlockConfig(String path);
 }
