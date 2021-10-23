@@ -8,6 +8,7 @@ import java.time.Clock;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -17,7 +18,9 @@ public class ServiceBuilder {
     private final Map<BlockRef<?>, Block<?>> blocks = new HashMap<>();
     private final Map<BlockRef<?>, Set<BlockRef<?>>> blockDependencies = new HashMap<>();
     private Function<ActorSystem<?>, LoggingAdapter> requestsLoggerCreator = system -> Logging.getLogger(system.classicSystem(), "http-metrics");
-    private Function<RequestLoggingDetails, String> requestsMessageFunction = RequestMetricsLogging.DEFAULT_MESSAGE_FUNCTION;
+    private Function<RequestLoggingDetails, String> requestsMessageFunction = RequestMetrics.DEFAULT_MESSAGE_FUNCTION;
+    private Optional<Function<BlockContext, Runnable>> requestsStartNotificationRunnableCreator = Optional.empty();
+    private Optional<Function<BlockContext, Runnable>> requestsEndNotificationRunnableCreator = Optional.empty();
 
     private ServiceBuilder() {
 
@@ -43,7 +46,18 @@ public class ServiceBuilder {
         return this;
     }
 
-    public ActorSystem<ServiceProtocol.Message> start(final Clock clock, final ServiceConfig config) {
-        return ActorSystem.create(ServiceActor.behavior(clock, config, blocks, blockDependencies, requestsLoggerCreator, requestsMessageFunction), "service");
+    public ServiceBuilder withRequestsStartNotificationRunnableCreator(final Function<BlockContext, Runnable> runnableCreator) {
+        this.requestsStartNotificationRunnableCreator = Optional.of(runnableCreator);
+        return this;
+    }
+
+    public ServiceBuilder withRequestsEndNotificationRunnableCreator(final Function<BlockContext, Runnable> runnableCreator) {
+        this.requestsEndNotificationRunnableCreator = Optional.of(runnableCreator);
+        return this;
+    }
+
+    public ActorSystem<ServiceProtocol.Message> start(final Clock clock,
+                                                      final ServiceConfig config) {
+        return ActorSystem.create(ServiceActor.behavior(clock, config, blocks, blockDependencies, requestsLoggerCreator, requestsMessageFunction, requestsStartNotificationRunnableCreator, requestsEndNotificationRunnableCreator), "service");
     }
 }

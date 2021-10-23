@@ -41,6 +41,7 @@ dependencies {
     implementation project(':service-akka-typed-block')
     implementation project(':rest-endpoints-block')
     implementation project(':health-block')
+    implementation project(':service-info-block')
     implementation project(':swagger-block')
     implementation project(':swagger-ui-block')
     implementation project(':ui-block')

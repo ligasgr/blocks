@@ -1,7 +1,6 @@
 package blocks.service;
 
 import akka.NotUsed;
-import akka.actor.ActorSystem;
 import akka.actor.CoordinatedShutdown;
 import akka.actor.typed.Behavior;
 import akka.actor.typed.PostStop;
@@ -63,6 +62,8 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
     private final Set<BlockRef<?>> blocksToInitialize = new HashSet<>();
     private final Set<BlockRef<?>> mandatoryBlocksToInitialize = new HashSet<>();
     private final Map<BlockRef<?>, Block<?>> blocks;
+    private final Optional<Function<BlockContext, Runnable>> requestsStartNotificationRunnableCreator;
+    private final Optional<Function<BlockContext, Runnable>> requestsEndNotificationRunnableCreator;
     private final Map<BlockRef<?>, Set<BlockRef<?>>> blockOutstandingDependencies = new HashMap<>();
     private final Map<BlockRef<?>, Set<BlockRef<?>>> blocksDependingOn = new HashMap<>();
     private final ServiceConfig config;
@@ -71,14 +72,20 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
     private boolean isReady = false;
     private final Http http;
     private final Route finalRoute;
+    private final AtomicReference<Runnable> requestsStartNotificationRunnable = new AtomicReference<>();
+    private final AtomicReference<Runnable> requestsEndNotificationRunnable = new AtomicReference<>();
 
     public static Behavior<ServiceProtocol.Message> behavior(Clock clock,
                                                              ServiceConfig config,
                                                              Map<BlockRef<?>, Block<?>> blocks,
                                                              final Map<BlockRef<?>, Set<BlockRef<?>>> blockDependencies,
                                                              final Function<akka.actor.typed.ActorSystem<?>, LoggingAdapter> requestsLoggerCreator,
-                                                             final Function<RequestLoggingDetails, String> requestsMessageFunction) {
-        return Behaviors.setup(context -> new ServiceActor(context, clock, config, blocks, blockDependencies, requestsLoggerCreator, requestsMessageFunction));
+                                                             final Function<RequestLoggingDetails, String> requestsMessageFunction,
+                                                             final Optional<Function<BlockContext, Runnable>> requestsStartNotificationRunnableCreator,
+                                                             final Optional<Function<BlockContext, Runnable>> requestsEndNotificationRunnableCreator
+    ) {
+        return Behaviors.setup(context -> new ServiceActor(context, clock, config, blocks, blockDependencies, requestsLoggerCreator, requestsMessageFunction,
+                requestsStartNotificationRunnableCreator, requestsEndNotificationRunnableCreator));
     }
 
     public ServiceActor(final ActorContext<ServiceProtocol.Message> context,
@@ -87,7 +94,10 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
                         final Map<BlockRef<?>, Block<?>> blocks,
                         final Map<BlockRef<?>, Set<BlockRef<?>>> blockDependencies,
                         final Function<akka.actor.typed.ActorSystem<?>, LoggingAdapter> requestsLoggerCreator,
-                        final Function<RequestLoggingDetails, String> requestsMessageFunction) {
+                        final Function<RequestLoggingDetails, String> requestsMessageFunction,
+                        final Optional<Function<BlockContext, Runnable>> requestsStartNotificationRunnableCreator,
+                        final Optional<Function<BlockContext, Runnable>> requestsEndNotificationRunnableCreator
+    ) {
         super(context);
         this.clock = clock;
         this.startInstant = clock.instant();
@@ -97,6 +107,8 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
         this.httpPort = config.getHttpPort();
         this.config = config;
         this.blocks = blocks;
+        this.requestsStartNotificationRunnableCreator = requestsStartNotificationRunnableCreator;
+        this.requestsEndNotificationRunnableCreator = requestsEndNotificationRunnableCreator;
         initializationBanner();
         buildDependenciesMappings(blocks, blockDependencies);
         final CorsSettings settings = CorsSettings.defaultSettings();
@@ -104,7 +116,22 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
         final Route route = basicRoutes().orElse(dynamicRouteAdapter);
         akka.actor.typed.ActorSystem<Void> system = getContext().getSystem();
         final LoggingAdapter metricsLog = requestsLoggerCreator.apply(system);
-        finalRoute = RequestMetricsLogging.logRequests(metricsLog, requestsMessageFunction, () -> cors(settings, () -> route).seal());
+        finalRoute = RequestMetrics.captureRequests(
+                metricsLog,
+                requestsMessageFunction,
+                () -> {
+                    final Runnable actualRunnable = requestsStartNotificationRunnable.get();
+                    if (actualRunnable != null) {
+                        actualRunnable.run();
+                    }
+                },
+                () -> {
+                    final Runnable actualRunnable = requestsEndNotificationRunnable.get();
+                    if (actualRunnable != null) {
+                        actualRunnable.run();
+                    }
+                },
+                () -> cors(settings, () -> route).seal());
         getContext().getSelf().tell(new ServiceProtocol.BindPorts(finalRoute));
         CoordinatedShutdown.get(system.classicSystem()).addJvmShutdownHook(this::shutdownBanner);
         http = Http.get(system);
@@ -198,6 +225,9 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
         }
         initializationFinishedBanner();
         this.isReady = true;
+        BlockContext blockContext = getBlockContext();
+        requestsStartNotificationRunnableCreator.ifPresent(creator -> requestsStartNotificationRunnable.set(creator.apply(blockContext)));
+        requestsEndNotificationRunnableCreator.ifPresent(creator -> requestsEndNotificationRunnable.set(creator.apply(blockContext)));
         return Behaviors.same();
     }
 
@@ -276,11 +306,15 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
                     Block<?> block = blocks.get(blockRef);
                     if (block.getStatus() == BlockStatus.NOT_INITIALIZED) {
                         log.info("Scheduling initialization for {}", blockRef);
-                        BlockContext blockContext = new BlockContext(getContext(), http, finalRoute, env, config, startInstant, clock, blocks.keySet(), blocks::get);
+                        BlockContext blockContext = getBlockContext();
                         blocks.values().forEach(b -> b.onInitializeBlock(blockRef));
                         getContext().pipeToSelf(block.initialize(blockContext), (r, t) -> new ServiceProtocol.InitializedBlock<Object>(blockRef, r, t));
                     }
                 });
+    }
+
+    private BlockContext getBlockContext() {
+        return new BlockContext(getContext(), http, finalRoute, env, config, startInstant, clock, blocks.keySet(), blocks::get);
     }
 
     private void addToDynamicRoutes(final Route route) {

@@ -1,7 +1,6 @@
 package example;
 
 
-import akka.Done;
 import akka.NotUsed;
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.ActorSystem;
@@ -51,11 +50,13 @@ import blocks.secrets.config.SecretsConfigBlock;
 import blocks.service.BlockContext;
 import blocks.service.BlockRef;
 import blocks.service.JsonUtil;
-import blocks.service.RequestMetricsLogging;
+import blocks.service.RequestMetrics;
 import blocks.service.SecretsConfig;
 import blocks.service.ServiceBuilder;
 import blocks.service.ServiceConfig;
 import blocks.service.TypesafeServiceConfig;
+import blocks.service.info.ServiceInfoBlock;
+import blocks.service.info.ServiceInfoProtocol;
 import blocks.storage.file.FileStorageBlock;
 import blocks.storage.file.Storage;
 import blocks.swagger.SwaggerBlock;
@@ -111,7 +112,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -135,6 +135,7 @@ public class Main {
         BlockRef<MongoClient> mongoBlockRef = MongoBlock.getRef("mongo");
         BlockRef<Storage> fileStorageBlockRef = FileStorageBlock.getRef("fs");
         BlockRef<JmsObjectFactory> jmsBlockRef = JmsBlock.getRef("jms-activemq");
+        BlockRef<ActorRef<ServiceInfoProtocol.Message>> serviceInfoBlockRef = ServiceInfoBlock.getRef("serviceInfo");
         Function<BlockContext, Routes> routesCreator = (context) -> new DirectiveRoutes(context, secretsConfigBlockRef, rdbmsBlockRef, couchbaseBlockRef, fileStorageBlockRef, mongoBlockRef, jmsBlockRef);
         Function<BlockContext, WebSocketMessageHandler> wsHandlerCreator = (context) -> new WsHandler(context.context.getLog());
         BlockRef<KeyStore> keyStoreBlockRef = KeystoreBlock.getRef("httpsKeystore");
@@ -155,6 +156,7 @@ public class Main {
                 .withBlock(keyStoreBlockRef, new KeystoreBlock("PKCS12", "p12", "https.keystore.password", secretsConfigBlockRef), secretsConfigBlockRef)
                 .withBlock(HttpsBlock.getRef("https"), new HttpsBlock(keyStoreBlockRef, "https.keystore.password", secretsConfigBlockRef), keyStoreBlockRef, secretsConfigBlockRef)
                 .withBlock(healthBlockRef, new HealthBlock(staticProperties))
+                .withBlock(serviceInfoBlockRef, new ServiceInfoBlock(staticProperties))
                 .withBlock(SwaggerBlock.getRef("swagger"), new SwaggerBlock(info))
                 .withBlock(SwaggerUiBlock.getRef("swagger-ui"), new SwaggerUiBlock())
                 .withBlock(UiBlock.getRef("ui"), new UiBlock())
@@ -168,7 +170,16 @@ public class Main {
                 .withBlock(jmsBlockRef, new JmsBlock(healthBlockRef, "activemq", Optional.of(blockContext -> blockContext.getBlockOutput(secretsConfigBlockRef).getSecret("activemq.securityCredentials"))), healthBlockRef, secretsConfigBlockRef)
                 .withBlock(RestEndpointsBlock.getRef("rest"), new RestEndpointsBlock(routesCreator, Collections.singleton(DirectiveRoutes.class), healthBlockRef), healthBlockRef, secretsConfigBlockRef, rdbmsBlockRef, couchbaseBlockRef, fileStorageBlockRef, mongoBlockRef, jmsBlockRef)
                 .withRequestLogger(system -> Logging.getLogger(system.classicSystem(), "requests-logging"))
-                .withRequestsMessageFunction(RequestMetricsLogging.DEFAULT_MESSAGE_FUNCTION)
+                .withRequestsMessageFunction(RequestMetrics.DEFAULT_MESSAGE_FUNCTION)
+                .withRequestsStartNotificationRunnableCreator(ctx -> () -> {
+                    ActorRef<ServiceInfoProtocol.Message> blockOutput = ctx.getBlockOutput(serviceInfoBlockRef);
+                    blockOutput.tell(new ServiceInfoProtocol.UpdateCounter("activeRequests", 1L));
+                    blockOutput.tell(new ServiceInfoProtocol.UpdateCounter("totalRequests", 1L));
+                })
+                .withRequestsEndNotificationRunnableCreator(ctx -> () -> {
+                    ActorRef<ServiceInfoProtocol.Message> blockOutput = ctx.getBlockOutput(serviceInfoBlockRef);
+                    blockOutput.tell(new ServiceInfoProtocol.UpdateCounter("activeRequests", -1L));
+                })
                 .start(Clock.systemDefaultZone(), config);
     }
 

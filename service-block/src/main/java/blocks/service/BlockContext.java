@@ -40,7 +40,11 @@ public class BlockContext {
 
     @SuppressWarnings("unchecked")
     public <B> B getBlockOutput(BlockRef<B> key) {
-        Optional<B> blockOutput = (Optional<B>) blockFetchFunction.apply(key).getBlockOutput();
+        Block<?> block = blockFetchFunction.apply(key);
+        if (block == null) {
+            throw new IllegalStateException("Missing block " + key.key + " (" + key.type.getType() + "). Have you forgotten to add the block instance to list of blocks?");
+        }
+        Optional<B> blockOutput = (Optional<B>) block.getBlockOutput();
         if (!blockOutput.isPresent()) {
             throw new IllegalStateException("Missing output of " + key.key + " " + key.type.getType());
         }

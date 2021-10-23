@@ -16,42 +16,54 @@ import akka.util.ByteString;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public class RequestMetricsLogging {
-    public static final Function<RequestLoggingDetails, String> DEFAULT_MESSAGE_FUNCTION = RequestMetricsLogging::prepareMessage;
+public class RequestMetrics {
+    public static final Function<RequestLoggingDetails, String> DEFAULT_MESSAGE_FUNCTION = RequestMetrics::prepareMessage;
 
-    public static Route logRequests(final LoggingAdapter log, final Function<RequestLoggingDetails, String> messageFunction, final Supplier<Route> route) {
+    public static Route captureRequests(
+            final LoggingAdapter log,
+            final Function<RequestLoggingDetails, String> messageFunction,
+            final Runnable requestsStartNotificationRunnable,
+            final Runnable requestsEndNotificationRunnable,
+            final Supplier<Route> route) {
         return Directives.extractClientIP(address ->
                 Directives.extractRequestContext(requestContext -> {
                     final long start = System.nanoTime();
+                    requestsStartNotificationRunnable.run();
                     return Directives.mapRouteResult(routeResult ->
-                                    logRequestAndMaybeChangeRouteResult(log, messageFunction, address, requestContext, routeResult, start),
+                                    logRequestAndMaybeChangeRouteResult(log, messageFunction, requestsEndNotificationRunnable, address, requestContext, routeResult, start),
                             route);
                 })
         );
     }
 
-    private static RouteResult logRequestAndMaybeChangeRouteResult(final LoggingAdapter log, final Function<RequestLoggingDetails, String> messageFunction, final RemoteAddress address, final RequestContext requestContext, final RouteResult routeResult, final long start) {
+    private static RouteResult logRequestAndMaybeChangeRouteResult(final LoggingAdapter log,
+                                                                   final Function<RequestLoggingDetails, String> messageFunction,
+                                                                   final Runnable requestsEndNotificationRunnable,
+                                                                   final RemoteAddress address,
+                                                                   final RequestContext requestContext,
+                                                                   final RouteResult routeResult,
+                                                                   final long start) {
         HttpRequest request = requestContext.getRequest();
         if (routeResult instanceof Complete) {
             HttpResponse response = ((Complete) routeResult).getResponse();
             if (response.entity().isKnownEmpty() || !response.entity().isChunked()) {
-                logRequest(log, messageFunction, address, start, request, response.status().intValue(), false);
+                logRequest(log, messageFunction, requestsEndNotificationRunnable, address, start, request, response.status().intValue(), false);
                 return routeResult;
             } else {
-                return logRequestAfterStreamingCompletion(log, messageFunction, address, start, request, response);
+                return logRequestAfterStreamingCompletion(log, messageFunction, requestsEndNotificationRunnable, address, start, request, response);
             }
         }
         return routeResult;
     }
 
-    private static Complete logRequestAfterStreamingCompletion(final LoggingAdapter log, final Function<RequestLoggingDetails, String> messageFunction, final RemoteAddress address, final long start, final HttpRequest request, final HttpResponse response) {
+    private static Complete logRequestAfterStreamingCompletion(final LoggingAdapter log, final Function<RequestLoggingDetails, String> messageFunction, final Runnable requestsEndNotificationRunnable, final RemoteAddress address, final long start, final HttpRequest request, final HttpResponse response) {
         HttpResponse modifiedResponse = response.transformEntityDataBytes(Flow.<ByteString>create()
                 .watchTermination((materialization, futureDone) -> {
                     futureDone.whenComplete((done, throwable) -> {
                         if (throwable != null) {
                             log.error(throwable, "Request failed");
                         }
-                        logRequest(log, messageFunction, address, start, request, response.status().intValue(), true);
+                        logRequest(log, messageFunction, requestsEndNotificationRunnable, address, start, request, response.status().intValue(), true);
                     });
                     return materialization;
                 })
@@ -59,11 +71,12 @@ public class RequestMetricsLogging {
         return RouteResults.complete(modifiedResponse);
     }
 
-    private static void logRequest(final LoggingAdapter log, final Function<RequestLoggingDetails, String> messageFunction, final RemoteAddress address, final long start, final HttpRequest request, final int statusCode, final boolean streamed) {
+    private static void logRequest(final LoggingAdapter log, final Function<RequestLoggingDetails, String> messageFunction, final Runnable requestsEndNotificationRunnable, final RemoteAddress address, final long start, final HttpRequest request, final int statusCode, final boolean streamed) {
         if (log.isInfoEnabled()) {
             long timeInNano = System.nanoTime() - start;
             RequestLoggingDetails details = new RequestLoggingDetails(address, request, statusCode, streamed, timeInNano);
             log.info(messageFunction.apply(details));
+            requestsEndNotificationRunnable.run();
         }
     }
 
