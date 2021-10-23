@@ -83,6 +83,7 @@ public class WebSocketBlock extends AbstractBlock<Route> {
                 .map(v -> (Message) v)
                 .toMat(outgoingMessagesSink, Keep.left())
                 .run(system);
+        handler.registerOutgoingQueue(session, outgoingMessageQueue);
         Subscriber<Message> incomingMessagesSubscriber = incomingMessagesSource
                 .recover(exceptionLoggingFunction(session, outgoingMessageQueue))
                 .via(messageHandlingFlow(session, outgoingMessageQueue))

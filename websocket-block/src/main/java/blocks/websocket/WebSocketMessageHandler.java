@@ -12,4 +12,8 @@ public interface WebSocketMessageHandler {
     TextMessage handleException(String session, Throwable throwable, SourceQueueWithComplete<TextMessage> outgoingMessagesQueue);
 
     TextMessage handleTextMessage(String session, TextMessage msg, SourceQueueWithComplete<TextMessage> outgoingMessagesQueue);
+
+    default void registerOutgoingQueue(String session, SourceQueueWithComplete<TextMessage> outgoingMessageQueue) {
+
+    }
 }

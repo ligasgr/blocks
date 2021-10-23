@@ -4,6 +4,8 @@ package example;
 import akka.NotUsed;
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.ActorSystem;
+import akka.actor.typed.Scheduler;
+import akka.actor.typed.javadsl.AskPattern;
 import akka.event.Logging;
 import akka.http.javadsl.Http;
 import akka.http.javadsl.common.EntityStreamingSupport;
@@ -55,6 +57,7 @@ import blocks.service.SecretsConfig;
 import blocks.service.ServiceBuilder;
 import blocks.service.ServiceConfig;
 import blocks.service.TypesafeServiceConfig;
+import blocks.service.info.ServiceInfo;
 import blocks.service.info.ServiceInfoBlock;
 import blocks.service.info.ServiceInfoProtocol;
 import blocks.storage.file.FileStorageBlock;
@@ -106,13 +109,17 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -126,6 +133,9 @@ public class Main {
 
     public static final ObjectReader OBJECT_READER = JsonUtil.DEFAULT_OBJECT_MAPPER.reader();
 
+    public Main() {
+    }
+
     public static void main(String[] args) {
         BlockRef<ActorRef<HealthProtocol.Message>> healthBlockRef = HealthBlock.getRef("health");
         BlockRef<SecretsConfig> secretsConfigBlockRef = SecretsConfigBlock.getRef("secrets-config");
@@ -137,7 +147,8 @@ public class Main {
         BlockRef<JmsObjectFactory> jmsBlockRef = JmsBlock.getRef("jms-activemq");
         BlockRef<ActorRef<ServiceInfoProtocol.Message>> serviceInfoBlockRef = ServiceInfoBlock.getRef("serviceInfo");
         Function<BlockContext, Routes> routesCreator = (context) -> new DirectiveRoutes(context, secretsConfigBlockRef, rdbmsBlockRef, couchbaseBlockRef, fileStorageBlockRef, mongoBlockRef, jmsBlockRef);
-        Function<BlockContext, WebSocketMessageHandler> wsHandlerCreator = (context) -> new WsHandler(context.context.getLog());
+//        Function<BlockContext, WebSocketMessageHandler> wsHandlerCreator = (context) -> new WsHandler(context.context.getLog());
+        Function<BlockContext, WebSocketMessageHandler> wsHandlerCreator = (context) -> new CountersAndHealthWsHandler(context.context.getLog(), context, serviceInfoBlockRef, healthBlockRef, context.context.getSystem().scheduler());
         BlockRef<KeyStore> keyStoreBlockRef = KeystoreBlock.getRef("httpsKeystore");
         Map<String, JsonNode> staticProperties = new HashMap<>();
         staticProperties.put("serviceName", TextNode.valueOf("app-example"));
@@ -155,12 +166,12 @@ public class Main {
         ServiceBuilder.newService()
                 .withBlock(keyStoreBlockRef, new KeystoreBlock("PKCS12", "p12", "https.keystore.password", secretsConfigBlockRef), secretsConfigBlockRef)
                 .withBlock(HttpsBlock.getRef("https"), new HttpsBlock(keyStoreBlockRef, "https.keystore.password", secretsConfigBlockRef), keyStoreBlockRef, secretsConfigBlockRef)
-                .withBlock(healthBlockRef, new HealthBlock(staticProperties))
                 .withBlock(serviceInfoBlockRef, new ServiceInfoBlock(staticProperties))
+                .withBlock(healthBlockRef, new HealthBlock(staticProperties))
                 .withBlock(SwaggerBlock.getRef("swagger"), new SwaggerBlock(info))
                 .withBlock(SwaggerUiBlock.getRef("swagger-ui"), new SwaggerUiBlock())
                 .withBlock(UiBlock.getRef("ui"), new UiBlock())
-                .withBlock(WebSocketBlock.getRef("ws"), new WebSocketBlock(wsHandlerCreator, "ws", "ws"))
+                .withBlock(WebSocketBlock.getRef("ws"), new WebSocketBlock(wsHandlerCreator, "ws", "ws"), serviceInfoBlockRef, healthBlockRef)
 //                .withBlock(couchbaseBlockRef, new CouchbaseBlock(healthBlockRef, secretsConfigBlockRef, "couchbase"), healthBlockRef, secretsConfigBlockRef)
                 .withBlock(couchbaseBlockRef, new CouchbaseSdk2Block(healthBlockRef, secretsConfigBlockRef, "couchbase"), healthBlockRef, secretsConfigBlockRef)
                 .withBlock(mongoBlockRef, new MongoBlock(healthBlockRef, secretsConfigBlockRef, "mongo"), healthBlockRef, secretsConfigBlockRef)
@@ -171,14 +182,18 @@ public class Main {
                 .withBlock(RestEndpointsBlock.getRef("rest"), new RestEndpointsBlock(routesCreator, Collections.singleton(DirectiveRoutes.class), healthBlockRef), healthBlockRef, secretsConfigBlockRef, rdbmsBlockRef, couchbaseBlockRef, fileStorageBlockRef, mongoBlockRef, jmsBlockRef)
                 .withRequestLogger(system -> Logging.getLogger(system.classicSystem(), "requests-logging"))
                 .withRequestsMessageFunction(RequestMetrics.DEFAULT_MESSAGE_FUNCTION)
-                .withRequestsStartNotificationRunnableCreator(ctx -> () -> {
-                    ActorRef<ServiceInfoProtocol.Message> blockOutput = ctx.getBlockOutput(serviceInfoBlockRef);
-                    blockOutput.tell(new ServiceInfoProtocol.UpdateCounter("activeRequests", 1L));
-                    blockOutput.tell(new ServiceInfoProtocol.UpdateCounter("totalRequests", 1L));
+                .withRequestsStartNotificationRunnableCreator(ctx -> {
+                    final ActorRef<ServiceInfoProtocol.Message> blockOutput = ctx.getBlockOutput(serviceInfoBlockRef);
+                    return () -> {
+                        blockOutput.tell(new ServiceInfoProtocol.UpdateCounter("activeRequests", 1L));
+                        blockOutput.tell(new ServiceInfoProtocol.UpdateCounter("totalRequests", 1L));
+                    };
                 })
-                .withRequestsEndNotificationRunnableCreator(ctx -> () -> {
-                    ActorRef<ServiceInfoProtocol.Message> blockOutput = ctx.getBlockOutput(serviceInfoBlockRef);
-                    blockOutput.tell(new ServiceInfoProtocol.UpdateCounter("activeRequests", -1L));
+                .withRequestsEndNotificationRunnableCreator(ctx -> {
+                    final ActorRef<ServiceInfoProtocol.Message> blockOutput = ctx.getBlockOutput(serviceInfoBlockRef);
+                    return () -> {
+                        blockOutput.tell(new ServiceInfoProtocol.UpdateCounter("activeRequests", -1L));
+                    };
                 })
                 .start(Clock.systemDefaultZone(), config);
     }
@@ -522,5 +537,68 @@ public class Main {
             outgoingMessagesQueue.offer(TextMessage.create("{\"" + session + "\":\"" + messageText + "\"}"));
             return TextMessage.create("{\"" + session + "\":\"ok\"}");
         }
+    }
+
+    private static class CountersAndHealthWsHandler implements WebSocketMessageHandler {
+        private final Logger log;
+        private final Scheduler scheduler;
+        private final ActorRef<ServiceInfoProtocol.Message> serviceInfoActor;
+        private final Map<String, SourceQueueWithComplete<TextMessage>> queueForSession = new ConcurrentHashMap<>();
+
+        public CountersAndHealthWsHandler(final Logger log, final BlockContext context, final BlockRef<ActorRef<ServiceInfoProtocol.Message>> serviceInfoActorFuture, final BlockRef<ActorRef<HealthProtocol.Message>> healthBlockRef, final Scheduler scheduler) {
+            this.log = log;
+            this.scheduler = scheduler;
+            this.serviceInfoActor = context.getBlockOutput(serviceInfoActorFuture);
+            this.serviceInfoActor.tell(new ServiceInfoProtocol.SubscribeToInfoUpdates("counterWsHandler", (name, value)-> {
+                TextMessage message = createMessage(log, Collections.singletonMap(name, value));
+                log.info("Got update of counter: {}", message.getStrictText());
+                queueForSession.values().forEach(q -> q.offer(message));
+            }));
+        }
+
+        @Override
+        public String generateSessionId() {
+            return UUID.randomUUID().toString();
+        }
+
+        @Override
+        public void registerOutgoingQueue(final String session, final SourceQueueWithComplete<TextMessage> outgoingMessageQueue) {
+            queueForSession.put(session, outgoingMessageQueue);
+        }
+
+        @Override
+        public TextMessage keepAliveMessage() {
+            return TextMessage.create("{}");
+        }
+
+        @Override
+        public TextMessage handleException(final String session, final Throwable throwable, final SourceQueueWithComplete<TextMessage> outgoingMessagesQueue) {
+            log.error("[" + session + "] Got exception in session: {}" + throwable.getMessage(), throwable);
+            return TextMessage.create("{}");
+        }
+
+        @Override
+        public TextMessage handleTextMessage(final String session, final TextMessage msg, final SourceQueueWithComplete<TextMessage> outgoingMessagesQueue) {
+            String messageText = msg.getStrictText();
+            log.info("Got message '{}' in session: {}", messageText, session);
+            CompletionStage<ServiceInfo> serviceInfoFuture = AskPattern.ask(this.serviceInfoActor, ServiceInfoProtocol.GetServiceInfo::new, Duration.ofSeconds(10), scheduler);
+            Map<String, JsonNode> initialServiceInfoValue;
+            try {
+                initialServiceInfoValue = serviceInfoFuture.toCompletableFuture().get().serviceInfo;
+            } catch (InterruptedException | ExecutionException e) {
+                log.error("Failed to obtain current service info", e);
+                initialServiceInfoValue = Collections.emptyMap();
+            }
+            return createMessage(log, initialServiceInfoValue);
+        }
+
+    }
+    private static TextMessage createMessage(final Logger log, final Map<String, JsonNode> values) {
+        try {
+            return TextMessage.create(JsonUtil.DEFAULT_OBJECT_MAPPER.writeValueAsString(values));
+        } catch (JsonProcessingException e) {
+            log.error("Failed to serialize message", e);
+        }
+        return TextMessage.create("{}");
     }
 }

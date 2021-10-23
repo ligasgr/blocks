@@ -10,7 +10,9 @@ import akka.http.javadsl.model.ws.WebSocketRequest;
 import akka.http.javadsl.model.ws.WebSocketUpgradeResponse;
 import akka.http.scaladsl.model.StatusCodes;
 import akka.japi.Pair;
+import akka.stream.Graph;
 import akka.stream.OverflowStrategy;
+import akka.stream.SinkShape;
 import akka.stream.javadsl.Flow;
 import akka.stream.javadsl.Keep;
 import akka.stream.javadsl.Sink;
@@ -42,7 +44,11 @@ public class WsClient {
 
             Sink<Message, CompletionStage<Done>> messageSink =
                     Sink.foreach(message -> {
-                        String responseText = message.asTextMessage().getStrictText();
+                        final Graph<SinkShape<String>, CompletionStage<String>> sink = Sink.<String>head();
+                        String responseText = message.asTextMessage().getStreamedText()
+                                .fold(new StringBuilder(), StringBuilder::append)
+                                .map(StringBuilder::toString)
+                                .<CompletionStage<String>>runWith(sink, system).toCompletableFuture().get();
                         System.out.println("Received text message: [" + responseText + "]");
                         if (responseText.contains("Bye")) {
                             System.out.println("Got 'Bye'... Finishing!");
@@ -55,7 +61,7 @@ public class WsClient {
                     .toMat(messageSink, Keep.both())
                     .run(system);
 
-            List<String> messages = asList("Hello", "Bonjour", "Aloha", "Czesc", "Bye");
+            List<String> messages = asList("Hello", "Bonjour", "Aloha", "Czesc"/*, "Bye"*/);
             for (String message : messages) {
                 System.out.println("Enqueueing " + message);
                 messageSourceQueue.offer(message);
