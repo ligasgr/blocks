@@ -67,6 +67,7 @@ public class ServiceInfoActor extends AbstractBehavior<ServiceInfoProtocol.Messa
         String name = message.name;
         final Long currentValue = counters.getOrDefault(name, 0L);
         long nextValue = currentValue + message.delta;
+        getContext().getLog().trace("{}={}", name, nextValue);
         counters.put(name, nextValue);
         subscribers.forEach((subscriberName, consumer) -> consumer.accept(message.name, LongNode.valueOf(nextValue)));
         return Behaviors.same();
