@@ -123,9 +123,13 @@ public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
             }
             if (dependencies.get(message.component).isHealthy != message.health.isHealthy) {
                 getContext().getLog().info("Changing health of component '{}' to '{}'", message.component, message.health.isHealthy ? "healthy" : "unhealthy");
+            }
+            boolean hadChange = dependencies.get(message.component).isInitialized != message.health.isInitialized
+                    || dependencies.get(message.component).isHealthy != message.health.isHealthy;
+            dependencies.put(message.component, message.health);
+            if (hadChange) {
                 notifyOfHealthChange(message.health);
             }
-            dependencies.put(message.component, message.health);
         } else {
             getContext().getLog().error("Tried to update health of unregistered component '{}'", message.component);
         }

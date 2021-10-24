@@ -76,6 +76,7 @@ import com.couchbase.client.java.query.N1qlQuery;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.node.BooleanNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.mongodb.reactivestreams.client.FindPublisher;
 import com.mongodb.reactivestreams.client.MongoClient;
@@ -561,6 +562,13 @@ public class Main {
             this.serviceInfoActor.tell(new ServiceInfoProtocol.SubscribeToInfoUpdates("counterWsHandler", (name, value)-> {
                 TextMessage message = createMessage(log, Collections.singletonMap(name, value));
                 log.info("Got update of counter: {}", message.getStrictText());
+                queueForSession.values().forEach(q -> q.offer(message));
+            }));
+            ActorRef<HealthProtocol.Message> healthActor = context.getBlockOutput(healthBlockRef);
+            healthActor.tell(new HealthProtocol.SubscribeToHealthChangeUpdates("serviceInfo", healthAndLatestUpdate -> {
+                Boolean isHealthy = healthAndLatestUpdate.first();
+                TextMessage message = createMessage(log, Collections.singletonMap("isHealthy", BooleanNode.valueOf(isHealthy)));
+                log.info("Got health update isHealthy: {}", message.getStrictText());
                 queueForSession.values().forEach(q -> q.offer(message));
             }));
         }
