@@ -33,17 +33,33 @@ public class WebSocketBlock extends AbstractBlock<Route> {
     private final Function<BlockContext, WebSocketMessageHandler> handlerCreator;
     private final String blockConfigPath;
     private final String webSocketPath;
+    private final Optional<Function<BlockContext, Runnable>> requestsStartNotificationRunnableCreator;
+    private final Optional<Function<BlockContext, Runnable>> requestsEndNotificationRunnableCreator;
     private WebSocketMessageHandler handler;
 
-    public WebSocketBlock(final Function<BlockContext, WebSocketMessageHandler> handlerCreator, final String blockConfigPath, final String webSocketPath) {
+    public WebSocketBlock(final Function<BlockContext, WebSocketMessageHandler> handlerCreator,
+                          final String blockConfigPath,
+                          final String webSocketPath) {
+        this(handlerCreator, blockConfigPath, webSocketPath, Optional.empty(), Optional.empty());
+    }
+    public WebSocketBlock(final Function<BlockContext, WebSocketMessageHandler> handlerCreator,
+                          final String blockConfigPath,
+                          final String webSocketPath,
+                          final Optional<Function<BlockContext, Runnable>> requestsStartNotificationRunnableCreator,
+                          final Optional<Function<BlockContext, Runnable>> requestsEndNotificationRunnableCreator
+    ) {
         this.handlerCreator = handlerCreator;
         this.blockConfigPath = blockConfigPath;
         this.webSocketPath = webSocketPath;
+        this.requestsStartNotificationRunnableCreator = requestsStartNotificationRunnableCreator;
+        this.requestsEndNotificationRunnableCreator = requestsEndNotificationRunnableCreator;
     }
 
     @Override
     protected CompletableFuture<Route> getBlockOutputFuture(final BlockContext blockContext) {
         handler = handlerCreator.apply(blockContext);
+        Optional<Runnable> requestStartNotificationRunnable = requestsStartNotificationRunnableCreator.map(f -> f.apply(blockContext));
+        Optional<Runnable> requestEndNotificationRunnable = requestsEndNotificationRunnableCreator.map(f -> f.apply(blockContext));
         BlockConfig blockConfig = blockContext.config.getBlockConfig(blockConfigPath);
         String strippedOfFirstSlash = this.webSocketPath.charAt(0) == '/' ? this.webSocketPath.substring(1) : this.webSocketPath;
         String[] webSocketPath = strippedOfFirstSlash.split("/");
@@ -54,9 +70,16 @@ public class WebSocketBlock extends AbstractBlock<Route> {
             i++;
         }
         return CompletableFuture.completedFuture(Directives.path(webSocketPathMatcher, () ->
-                Directives.get(() ->
-                        Directives.<NotUsed>handleWebSocketMessages(messageHandlingFlow(blockContext.context.getSystem(), blockConfig.getDuration("keepAliveMessageFrequency")))
-                )
+                Directives.get(() -> {
+                    requestStartNotificationRunnable.ifPresent(Runnable::run);
+                    Flow<Message, Message, NotUsed> keepAliveMessageFrequency = messageHandlingFlow(blockContext.context.getSystem(), blockConfig.getDuration("keepAliveMessageFrequency"))
+                            .watchTermination((mat, eventuallyDone) -> eventuallyDone.handle((d, t) -> {
+                                requestEndNotificationRunnable.ifPresent(Runnable::run);
+                                return NotUsed.getInstance();
+                            }))
+                            .mapMaterializedValue(v -> NotUsed.getInstance());
+                    return Directives.<NotUsed>handleWebSocketMessages(keepAliveMessageFrequency);
+                })
         ));
     }
 
@@ -71,7 +94,7 @@ public class WebSocketBlock extends AbstractBlock<Route> {
         return true;
     }
 
-    private Flow<Message, Message, NotUsed> messageHandlingFlow(ActorSystem<Void> system, final Duration keepAliveMessageFrequency) {
+    protected Flow<Message, Message, NotUsed> messageHandlingFlow(ActorSystem<Void> system, final Duration keepAliveMessageFrequency) {
         String session = handler.generateSessionId();
         final Logger log = system.log();
         log.info("Starting new session: " + session);

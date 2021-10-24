@@ -163,6 +163,15 @@ public class Main {
                         "</p>")
                 .contact(new Contact().name("Developer").email("dev@blocks"))
                 .version("1.0");
+        WebSocketBlock webSocketBlock = new WebSocketBlock(wsHandlerCreator, "ws", "ws",
+                Optional.of(ctx -> {
+                    final ActorRef<ServiceInfoProtocol.Message> blockOutput = ctx.getBlockOutput(serviceInfoBlockRef);
+                    return () -> blockOutput.tell(new ServiceInfoProtocol.UpdateCounter("activeWebSockets", 1L));
+                }),
+                Optional.of(ctx -> {
+                    final ActorRef<ServiceInfoProtocol.Message> blockOutput = ctx.getBlockOutput(serviceInfoBlockRef);
+                    return () -> blockOutput.tell(new ServiceInfoProtocol.UpdateCounter("activeWebSockets", -1L));
+                }));
         ServiceBuilder.newService()
                 .withBlock(keyStoreBlockRef, new KeystoreBlock("PKCS12", "p12", "https.keystore.password", secretsConfigBlockRef), secretsConfigBlockRef)
                 .withBlock(HttpsBlock.getRef("https"), new HttpsBlock(keyStoreBlockRef, "https.keystore.password", secretsConfigBlockRef), keyStoreBlockRef, secretsConfigBlockRef)
@@ -171,7 +180,7 @@ public class Main {
                 .withBlock(SwaggerBlock.getRef("swagger"), new SwaggerBlock(info))
                 .withBlock(SwaggerUiBlock.getRef("swagger-ui"), new SwaggerUiBlock())
                 .withBlock(UiBlock.getRef("ui"), new UiBlock())
-                .withBlock(WebSocketBlock.getRef("ws"), new WebSocketBlock(wsHandlerCreator, "ws", "ws"), serviceInfoBlockRef, healthBlockRef)
+                .withBlock(WebSocketBlock.getRef("ws"), webSocketBlock, serviceInfoBlockRef, healthBlockRef)
 //                .withBlock(couchbaseBlockRef, new CouchbaseBlock(healthBlockRef, secretsConfigBlockRef, "couchbase"), healthBlockRef, secretsConfigBlockRef)
                 .withBlock(couchbaseBlockRef, new CouchbaseSdk2Block(healthBlockRef, secretsConfigBlockRef, "couchbase"), healthBlockRef, secretsConfigBlockRef)
                 .withBlock(mongoBlockRef, new MongoBlock(healthBlockRef, secretsConfigBlockRef, "mongo"), healthBlockRef, secretsConfigBlockRef)
