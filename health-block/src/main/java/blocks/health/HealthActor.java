@@ -141,7 +141,11 @@ public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
             final Pair<Boolean, Boolean> healthyAndInitialized = getHealthyAndInitialized();
             final Boolean healthy = healthyAndInitialized.first();
             subscribers.forEach((subscriber, consumer) -> {
-                consumer.accept(Pair.create(healthy, componentHealth));
+                try {
+                    consumer.accept(Pair.create(healthy, componentHealth));
+                } catch (Exception e) {
+                    getContext().getLog().error("Failed to run health change notification", e);
+                }
             });
         }
     }
