@@ -144,7 +144,7 @@ public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
                 try {
                     consumer.accept(Pair.create(healthy, componentHealth));
                 } catch (Exception e) {
-                    getContext().getLog().error("Failed to run health change notification", e);
+                    getContext().getLog().error("Failed to run health change notification for subscriber: " + subscriber, e);
                 }
             });
         }

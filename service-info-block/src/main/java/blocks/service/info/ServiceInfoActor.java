@@ -59,7 +59,13 @@ public class ServiceInfoActor extends AbstractBehavior<ServiceInfoProtocol.Messa
 
     private Behavior<ServiceInfoProtocol.Message> onSetProperty(final ServiceInfoProtocol.SetProperty message) {
         properties.put(message.name, message.value);
-        subscribers.forEach((name, consumer) -> consumer.accept(message.name, message.value));
+        subscribers.forEach((name, consumer) -> {
+            try {
+                consumer.accept(message.name, message.value);
+            } catch (Exception e) {
+                getContext().getLog().error("Failed to run static property change notification for subscriber: " + name, e);
+            }
+        });
         return Behaviors.same();
     }
 
@@ -69,7 +75,13 @@ public class ServiceInfoActor extends AbstractBehavior<ServiceInfoProtocol.Messa
         long nextValue = currentValue + message.delta;
         getContext().getLog().trace("{}={}", name, nextValue);
         counters.put(name, nextValue);
-        subscribers.forEach((subscriberName, consumer) -> consumer.accept(message.name, LongNode.valueOf(nextValue)));
+        subscribers.forEach((subscriberName, consumer) -> {
+            try {
+                consumer.accept(message.name, LongNode.valueOf(nextValue));
+            } catch (Exception e) {
+                getContext().getLog().error("Failed to run counter change notification for subscriber: " + subscriberName, e);
+            }
+        });
         return Behaviors.same();
     }
 
