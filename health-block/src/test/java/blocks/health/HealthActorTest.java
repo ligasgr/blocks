@@ -1,12 +1,15 @@
 package blocks.health;
 
+import akka.actor.TypedActor;
 import akka.actor.testkit.typed.javadsl.LoggingTestKit;
 import akka.actor.testkit.typed.javadsl.TestProbe;
 import akka.actor.typed.ActorRef;
+import akka.actor.typed.internal.PoisonPill;
 import blocks.service.BlockStatus;
 import blocks.testkit.BlockTestBase;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.TextNode;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -24,6 +27,7 @@ import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static blocks.health.HealthProtocol.STOP;
 import static blocks.testkit.MockitoHelper.exactlyOnce;
 import static blocks.testkit.MockitoHelper.exactlyTwice;
 import static blocks.testkit.TestConstants.IN_AT_MOST_THREE_SECONDS;
@@ -69,6 +73,11 @@ class HealthActorTest extends BlockTestBase {
         when(clock.getZone()).thenReturn(ZONE_ID);
 
         healthActor = spawnActor(HealthActor.behavior(START_TIME, clock, Duration.ofSeconds(1), STATIC_PROPERTIES), "HealthActor");
+    }
+
+    @AfterEach
+    void tearDown() {
+        healthActor.tell(STOP);
     }
 
     @Test
@@ -191,7 +200,6 @@ class HealthActorTest extends BlockTestBase {
         testProbe.expectMessage(IN_AT_MOST_THREE_SECONDS, initialComponent);
 
         healthActor.tell(new HealthProtocol.SubscribeToHealthChangeUpdates("testSubscriber", (healthyAndComponentHealth) -> {
-            assertFalse(healthyAndComponentHealth.first());
             latestHealthUpdate.set(healthyAndComponentHealth.second());
         }));
         healthActor.tell(new HealthProtocol.UpdateComponentHealth("TestComponent", updatedComponentHealth));

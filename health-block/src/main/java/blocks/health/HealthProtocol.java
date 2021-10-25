@@ -9,6 +9,7 @@ import java.util.function.Consumer;
 
 public interface HealthProtocol {
     LogHealth LOG_HEALTH = new LogHealth();
+    Stop STOP = new Stop();
     interface Message {
 
     }
@@ -106,5 +107,8 @@ public interface HealthProtocol {
     }
 
     class LogHealth implements Message {
+    }
+
+    class Stop implements Message {
     }
 }

@@ -1,6 +1,7 @@
 package blocks.health;
 
 import akka.actor.typed.Behavior;
+import akka.actor.typed.PostStop;
 import akka.actor.typed.javadsl.AbstractBehavior;
 import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Behaviors;
@@ -26,17 +27,19 @@ import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 
 import static blocks.health.HealthProtocol.LOG_HEALTH;
+import static blocks.health.HealthProtocol.STOP;
 import static java.util.Objects.requireNonNull;
 
 public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
+    private static final BinaryOperator<Pair<Boolean, Boolean>> HEALTH_INFO_REDUCE_OPERATOR = (current, incoming) -> Pair.create(current.first() && incoming.first(), current.second() && incoming.second());
     private final ZonedDateTime startDateTime;
     private final Clock clock;
     private final Map<String, JsonNode> staticProperties;
     private final Map<String, ComponentHealth> dependencies = new HashMap<>();
     private final Map<String, BlockHealthInfo> blocks = new HashMap<>();
     private final Map<String, Consumer<Pair<Boolean, ComponentHealth>>> subscribers = new HashMap<>();
+    private final TimerScheduler<HealthProtocol.Message> timerScheduler;
 
-    private static final BinaryOperator<Pair<Boolean, Boolean>> HEALTH_INFO_REDUCE_OPERATOR = (current, incoming) -> Pair.create(current.first() && incoming.first(), current.second() && incoming.second());
 
     public static Behavior<HealthProtocol.Message> behavior(final Instant startInstant, final Clock clock, final Duration healthLoggingFrequency, final Map<String, JsonNode> staticProperties) {
         return Behaviors.setup(context -> Behaviors.withTimers(timerScheduler -> new HealthActor(context, timerScheduler,
@@ -51,6 +54,7 @@ public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
         this.startDateTime = ZonedDateTime.ofInstant(startInstant, ZoneId.systemDefault());
         this.clock = clock;
         this.staticProperties = staticProperties;
+        this.timerScheduler = timerScheduler;
         timerScheduler.startTimerAtFixedRate(LOG_HEALTH, healthLoggingFrequency);
     }
 
@@ -58,6 +62,7 @@ public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
     public Receive<HealthProtocol.Message> createReceive() {
         return ReceiveBuilder.<HealthProtocol.Message>create()
                 .onMessageEquals(LOG_HEALTH, this::onLogHealth)
+                .onMessageEquals(STOP, Behaviors::stopped)
                 .onMessage(HealthProtocol.GetHealth.class, this::onGetHealth)
                 .onMessage(HealthProtocol.RegisterBlock.class, this::onRegisterBlock)
                 .onMessage(HealthProtocol.UpdateBlockStatus.class, this::onUpdateBlockStatus)
@@ -65,7 +70,13 @@ public class HealthActor extends AbstractBehavior<HealthProtocol.Message> {
                 .onMessage(HealthProtocol.UpdateComponentHealth.class, this::onUpdateComponentHealth)
                 .onMessage(HealthProtocol.SubscribeToHealthChangeUpdates.class, this::onSubscribe)
                 .onMessage(HealthProtocol.UnSubscribeFromHealthChangeUpdates.class, this::onUnsubscribe)
+                .onSignal(PostStop.class, signal -> onPostStop())
                 .build();
+    }
+
+    private Behavior<HealthProtocol.Message> onPostStop() {
+        timerScheduler.cancelAll();
+        return Behaviors.same();
     }
 
     private Behavior<HealthProtocol.Message> onLogHealth() {
