@@ -165,14 +165,14 @@ public class Main {
                 .contact(new Contact().name("Developer").email("dev@blocks"))
                 .version("1.0");
         WebSocketBlock webSocketBlock = new WebSocketBlock(wsHandlerCreator, "ws", "ws",
-                Optional.of(ctx -> {
+                ctx -> {
                     final ActorRef<ServiceInfoProtocol.Message> blockOutput = ctx.getBlockOutput(serviceInfoBlockRef);
                     return () -> blockOutput.tell(new ServiceInfoProtocol.UpdateCounter("activeWebSockets", 1L));
-                }),
-                Optional.of(ctx -> {
+                },
+                ctx -> {
                     final ActorRef<ServiceInfoProtocol.Message> blockOutput = ctx.getBlockOutput(serviceInfoBlockRef);
                     return () -> blockOutput.tell(new ServiceInfoProtocol.UpdateCounter("activeWebSockets", -1L));
-                }));
+                });
         ServiceBuilder.newService()
                 .withBlock(keyStoreBlockRef, new KeystoreBlock("PKCS12", "p12", "https.keystore.password", secretsConfigBlockRef), secretsConfigBlockRef)
                 .withBlock(HttpsBlock.getRef("https"), new HttpsBlock(keyStoreBlockRef, "https.keystore.password", secretsConfigBlockRef), keyStoreBlockRef, secretsConfigBlockRef)

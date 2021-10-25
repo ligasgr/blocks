@@ -42,11 +42,21 @@ public class WebSocketBlock extends AbstractBlock<Route> {
                           final String webSocketPath) {
         this(handlerCreator, blockConfigPath, webSocketPath, Optional.empty(), Optional.empty());
     }
+
     public WebSocketBlock(final Function<BlockContext, WebSocketMessageHandler> handlerCreator,
                           final String blockConfigPath,
                           final String webSocketPath,
-                          final Optional<Function<BlockContext, Runnable>> requestsStartNotificationRunnableCreator,
-                          final Optional<Function<BlockContext, Runnable>> requestsEndNotificationRunnableCreator
+                          final Function<BlockContext, Runnable> requestsStartNotificationRunnableCreator,
+                          final Function<BlockContext, Runnable> requestsEndNotificationRunnableCreator
+    ) {
+        this(handlerCreator, blockConfigPath, webSocketPath, Optional.of(requestsStartNotificationRunnableCreator), Optional.of(requestsEndNotificationRunnableCreator));
+    }
+
+    private WebSocketBlock(final Function<BlockContext, WebSocketMessageHandler> handlerCreator,
+                           final String blockConfigPath,
+                           final String webSocketPath,
+                           final Optional<Function<BlockContext, Runnable>> requestsStartNotificationRunnableCreator,
+                           final Optional<Function<BlockContext, Runnable>> requestsEndNotificationRunnableCreator
     ) {
         this.handlerCreator = handlerCreator;
         this.blockConfigPath = blockConfigPath;
@@ -69,12 +79,21 @@ public class WebSocketBlock extends AbstractBlock<Route> {
             webSocketPathMatcher = webSocketPathMatcher.slash(webSocketPath[i]);
             i++;
         }
+        Logger log = blockContext.context.getLog();
         return CompletableFuture.completedFuture(Directives.path(webSocketPathMatcher, () ->
                 Directives.get(() -> {
-                    requestStartNotificationRunnable.ifPresent(Runnable::run);
+                    try {
+                        requestStartNotificationRunnable.ifPresent(Runnable::run);
+                    } catch (Exception e) {
+                        log.error("Failed to run start notification", e);
+                    }
                     Flow<Message, Message, NotUsed> keepAliveMessageFrequency = messageHandlingFlow(blockContext.context.getSystem(), blockConfig.getDuration("keepAliveMessageFrequency"))
                             .watchTermination((mat, eventuallyDone) -> eventuallyDone.handle((d, t) -> {
-                                requestEndNotificationRunnable.ifPresent(Runnable::run);
+                                try {
+                                    requestEndNotificationRunnable.ifPresent(Runnable::run);
+                                } catch (Exception e) {
+                                    log.error("Failed to run end notification", e);
+                                }
                                 return NotUsed.getInstance();
                             }))
                             .mapMaterializedValue(v -> NotUsed.getInstance());
