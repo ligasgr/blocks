@@ -87,13 +87,10 @@ public class CouchbaseSdk2HealthCheckActor extends AbstractBehavior<CouchbaseSdk
             return RxJavaFutureUtils.fromObservable(maybeCluster.get().async().diagnostics()
                     .map(d ->
                             d.endpoints(ServiceType.BINARY).stream()
-                            .map(endpointDiagnostics -> {
-                                System.out.println(endpointDiagnostics);
-                                Pair<String, Boolean> abc = Pair.create(endpointDiagnostics.remote().getHostName(), endpointDiagnostics.state() == CONNECTED);
-                                return abc;
-                            })
-                            .filter(e -> Objects.nonNull(e.first()))
-                            .collect(Collectors.toList()))
+                                    .filter(endpointHealth -> endpointHealth.remote() != null)
+                                    .map(endpointHealth -> Pair.create(endpointHealth.remote().getHostName(), endpointHealth.state() == CONNECTED))
+                                    .filter(e -> Objects.nonNull(e.first()))
+                                    .collect(Collectors.toList()))
                     .map(endpoints -> new Protocol.HealthInfo(true, null, endpoints))
             );
         }

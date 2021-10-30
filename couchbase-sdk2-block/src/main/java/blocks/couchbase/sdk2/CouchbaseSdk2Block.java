@@ -12,17 +12,20 @@ import blocks.service.SecretsConfig;
 import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.CouchbaseCluster;
+import com.couchbase.client.java.cluster.BucketSettings;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.Policy;
 import net.jodah.failsafe.RetryPolicy;
+import rx.Observable;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 public class CouchbaseSdk2Block extends AbstractBlock<Cluster> {
     private final BlockRef<ActorRef<HealthProtocol.Message>> healthBlockRef;
@@ -56,6 +59,7 @@ public class CouchbaseSdk2Block extends AbstractBlock<Cluster> {
         final Duration connectionTimeout = blockConfig.getDuration("connectionTimeout");
         final Duration waitUntilReadyTimeout = blockConfig.getDuration("waitUntilReadyTimeout");
         final String user = blockConfig.getString("user");
+        final Optional<String> bucketForHealthCheck = blockConfig.hasPath("bucketForHealthCheck") ? Optional.of(blockConfig.getString("bucketForHealthCheck")) : Optional.empty();
         final String password = secretsConfig.getSecret(blockConfigPath + "." + "password");
         ActorRef<HealthProtocol.Message> healthActor = maybeHealthActor.get();
         ActorRef<CouchbaseSdk2HealthCheckActor.Protocol.Message> couchbaseHealthCheckActor = blockContext.context.spawn(CouchbaseSdk2HealthCheckActor.behavior(healthActor, blockContext.clock, this, blockConfigPath), "couchbaseHealthCheckActor-" + blockConfigPath);
@@ -72,18 +76,19 @@ public class CouchbaseSdk2Block extends AbstractBlock<Cluster> {
                     .withMaxRetries(-1);
             return Failsafe.with(initializationPolicy).get(() -> initializeCluster(hosts, user, password, env));
         });
-        resultFuture
+        final Function<AsyncCluster, Observable<String>> bucketNameObservableCreator = bucketForHealthCheck.isPresent()
+                ? ignored -> Observable.just(bucketForHealthCheck.get())
+                : asyncCluster -> asyncCluster.clusterManager()
+                .flatMap(cm -> cm.getBuckets().first())
+                .map(BucketSettings::name);
+        return resultFuture
                 .thenCompose(cluster -> {
                             final AsyncCluster asyncCluster = cluster.async();
-                            return RxJavaFutureUtils.fromObservable(
-                                    asyncCluster.clusterManager()
-                                            .flatMap(cm -> cm.getBuckets().first())
-                                            .flatMap(bucketSettings -> asyncCluster.openBucket(bucketSettings.name()))
-                            );
+                            return RxJavaFutureUtils.fromObservable(bucketNameObservableCreator.apply(asyncCluster).flatMap(asyncCluster::openBucket))
+                                    .thenAccept(bucket -> couchbaseHealthCheckActor.tell(new CouchbaseSdk2HealthCheckActor.Protocol.CheckHealth()))
+                                    .thenApply(ignored -> cluster);
                         }
-                )
-                .thenAccept(bucket -> couchbaseHealthCheckActor.tell(new CouchbaseSdk2HealthCheckActor.Protocol.CheckHealth()));
-        return resultFuture;
+                );
     }
 
     private CouchbaseCluster initializeCluster(final List<String> hosts, final String user, final String password, final CouchbaseEnvironment env) {
