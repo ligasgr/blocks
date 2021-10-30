@@ -61,8 +61,10 @@ public class CouchbaseSdk2Block extends AbstractBlock<Cluster> {
         final String user = blockConfig.getString("user");
         final Optional<String> bucketForHealthCheck = blockConfig.hasPath("bucketForHealthCheck") ? Optional.of(blockConfig.getString("bucketForHealthCheck")) : Optional.empty();
         final String password = secretsConfig.getSecret(blockConfigPath + "." + "password");
+        final Duration healthyCheckDelay = blockConfig.hasPath("healthyCheckDelay") ? blockConfig.getDuration("healthyCheckDelay") : Duration.ofSeconds(15);
+        final Duration unhealthyCheckDelay = blockConfig.hasPath("unhealthyCheckDelay") ? blockConfig.getDuration("unhealthyCheckDelay") : Duration.ofSeconds(3);
         ActorRef<HealthProtocol.Message> healthActor = maybeHealthActor.get();
-        ActorRef<CouchbaseSdk2HealthCheckActor.Protocol.Message> couchbaseHealthCheckActor = blockContext.context.spawn(CouchbaseSdk2HealthCheckActor.behavior(healthActor, blockContext.clock, this, blockConfigPath), "couchbaseHealthCheckActor-" + blockConfigPath);
+        ActorRef<CouchbaseSdk2HealthCheckActor.Protocol.Message> couchbaseHealthCheckActor = blockContext.context.spawn(CouchbaseSdk2HealthCheckActor.behavior(healthActor, blockContext.clock, this, blockConfigPath, healthyCheckDelay, unhealthyCheckDelay), "couchbaseHealthCheckActor-" + blockConfigPath);
         CompletableFuture<Cluster> resultFuture = FutureUtils.futureOnDefaultDispatcher(blockContext.context, () -> {
             final CouchbaseEnvironment env = DefaultCouchbaseEnvironment.builder()
                     .autoreleaseAfter(autoreleaseAfter.toMillis())

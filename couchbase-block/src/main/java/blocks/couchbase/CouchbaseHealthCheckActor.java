@@ -36,10 +36,12 @@ public class CouchbaseHealthCheckActor extends AbstractBehavior<CouchbaseHealthC
     private final Clock clock;
     private final CouchbaseBlock couchbaseBlock;
     private final String blockConfigPath;
+    private final Duration healthyCheckDelay;
+    private final Duration unhealthyCheckDelay;
 
     public static Behavior<Protocol.Message> behavior(
-            final ActorRef<HealthProtocol.Message> healthActor, final Clock clock, final CouchbaseBlock couchbaseBlock, final String blockConfigPath) {
-        return Behaviors.setup(ctx -> Behaviors.withTimers(timer -> new CouchbaseHealthCheckActor(ctx, timer, healthActor, clock, couchbaseBlock, blockConfigPath)));
+            final ActorRef<HealthProtocol.Message> healthActor, final Clock clock, final CouchbaseBlock couchbaseBlock, final String blockConfigPath, final Duration healthyCheckDelay, final Duration unhealthyCheckDelay) {
+        return Behaviors.setup(ctx -> Behaviors.withTimers(timer -> new CouchbaseHealthCheckActor(ctx, timer, healthActor, clock, couchbaseBlock, blockConfigPath, healthyCheckDelay, unhealthyCheckDelay)));
     }
 
     public CouchbaseHealthCheckActor(final ActorContext<Protocol.Message> context,
@@ -47,7 +49,9 @@ public class CouchbaseHealthCheckActor extends AbstractBehavior<CouchbaseHealthC
                                      final ActorRef<HealthProtocol.Message> healthActor,
                                      final Clock clock,
                                      final CouchbaseBlock couchbaseBlock,
-                                     final String blockConfigPath) {
+                                     final String blockConfigPath,
+                                     final Duration healthyCheckDelay,
+                                     final Duration unhealthyCheckDelay) {
         super(context);
         this.timer = timer;
         this.healthActor = healthActor;
@@ -56,6 +60,8 @@ public class CouchbaseHealthCheckActor extends AbstractBehavior<CouchbaseHealthC
         this.blockConfigPath = blockConfigPath;
         context.getSelf().tell(CHECK_HEALTH);
         healthActor.tell(new HealthProtocol.RegisterComponent(componentName()));
+        this.healthyCheckDelay = healthyCheckDelay;
+        this.unhealthyCheckDelay = unhealthyCheckDelay;
     }
 
     @Override
@@ -99,7 +105,7 @@ public class CouchbaseHealthCheckActor extends AbstractBehavior<CouchbaseHealthC
             String message = msg.exception.getMessage() != null ? msg.exception.getMessage() : msg.exception.getClass().getCanonicalName();
             ComponentHealth health = new ComponentHealth(componentName(), false, msg.initialized, Optional.of(message), Collections.emptyList(), ZonedDateTime.now(clock), OptionalLong.empty());
             healthActor.tell(new HealthProtocol.UpdateComponentHealth(componentName(), health));
-            checkDelay = Duration.ofSeconds(3);
+            checkDelay = unhealthyCheckDelay;
         } else {
             final List<ComponentHealth> dependencies = msg.endpoints.stream()
                     .map(endpointDetails -> new ComponentHealth(endpointDetails.first(), endpointDetails.second(), true, Optional.empty(), Collections.emptyList(), ZonedDateTime.now(clock), OptionalLong.empty()))
@@ -108,7 +114,7 @@ public class CouchbaseHealthCheckActor extends AbstractBehavior<CouchbaseHealthC
             boolean isHealthy = !dependencies.isEmpty() && allEndpointsHealthy;
             ComponentHealth health = new ComponentHealth(componentName(), isHealthy, msg.initialized, Optional.empty(), dependencies, ZonedDateTime.now(clock), OptionalLong.empty());
             healthActor.tell(new HealthProtocol.UpdateComponentHealth(componentName(), health));
-            checkDelay = Duration.ofSeconds(15);
+            checkDelay = healthyCheckDelay;
         }
         timer.startSingleTimer(CHECK_HEALTH, checkDelay);
         return Behaviors.same();
