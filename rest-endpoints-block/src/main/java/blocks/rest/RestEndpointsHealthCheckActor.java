@@ -29,17 +29,21 @@ public class RestEndpointsHealthCheckActor extends AbstractBehavior<Message> {
     private final RestEndpointsHealthChecks restEndpointsHealthChecks;
     private final ActorRef<HealthProtocol.Message> healthActor;
     private final Clock clock;
+    private final Duration restHealthCheckDelay;
 
     public static Behavior<Message> behavior(final RestEndpointsHealthChecks restEndpointsHealthChecks,
-                                             final ActorRef<HealthProtocol.Message> healthActor, final Clock clock) {
-        return Behaviors.setup(ctx -> Behaviors.withTimers(timer -> new RestEndpointsHealthCheckActor(ctx, timer, restEndpointsHealthChecks, healthActor, clock)));
+                                             final ActorRef<HealthProtocol.Message> healthActor,
+                                             final Clock clock,
+                                             final Duration restHealthCheckDelay) {
+        return Behaviors.setup(ctx -> Behaviors.withTimers(timer -> new RestEndpointsHealthCheckActor(ctx, timer, restEndpointsHealthChecks, healthActor, clock, restHealthCheckDelay)));
     }
 
     public RestEndpointsHealthCheckActor(final ActorContext<Message> context,
                                          final TimerScheduler<Message> timer,
                                          final RestEndpointsHealthChecks restEndpointsHealthChecks,
                                          final ActorRef<HealthProtocol.Message> healthActor,
-                                         final Clock clock) {
+                                         final Clock clock,
+                                         final Duration restHealthCheckDelay) {
         super(context);
         this.timer = timer;
         this.restEndpointsHealthChecks = restEndpointsHealthChecks;
@@ -47,6 +51,7 @@ public class RestEndpointsHealthCheckActor extends AbstractBehavior<Message> {
         this.clock = clock;
         timer.startSingleTimer(CHECK_HEALTH, Duration.ofSeconds(3L));
         healthActor.tell(new HealthProtocol.RegisterComponent(COMPONENT));
+        this.restHealthCheckDelay = restHealthCheckDelay;
     }
 
     @Override
@@ -75,7 +80,7 @@ public class RestEndpointsHealthCheckActor extends AbstractBehavior<Message> {
             ComponentHealth health = new ComponentHealth(COMPONENT, isHealthy, true, Optional.empty(), details, ZonedDateTime.now(clock), OptionalLong.empty());
             healthActor.tell(new HealthProtocol.UpdateComponentHealth(COMPONENT, health));
         }
-        timer.startSingleTimer(CHECK_HEALTH, Duration.ofMinutes(5));
+        timer.startSingleTimer(CHECK_HEALTH, restHealthCheckDelay);
         return Behaviors.same();
     }
 

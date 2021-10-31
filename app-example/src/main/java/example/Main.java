@@ -189,7 +189,7 @@ public class Main {
                 .withBlock(rdbmsBlockRef, new RdbmsBlock(healthBlockRef, secretsConfigBlockRef, "db"), healthBlockRef, secretsConfigBlockRef)
                 .withBlock(fileStorageBlockRef, new FileStorageBlock("storage"))
                 .withBlock(jmsBlockRef, new JmsBlock(healthBlockRef, "activemq", Optional.of(blockContext -> blockContext.getBlockOutput(secretsConfigBlockRef).getSecret("activemq.securityCredentials"))), healthBlockRef, secretsConfigBlockRef)
-                .withBlock(RestEndpointsBlock.getRef("rest"), new RestEndpointsBlock(routesCreator, Collections.singleton(DirectiveRoutes.class), healthBlockRef), healthBlockRef, secretsConfigBlockRef, rdbmsBlockRef, couchbaseBlockRef, fileStorageBlockRef, mongoBlockRef, jmsBlockRef)
+                .withBlock(RestEndpointsBlock.getRef("rest"), new RestEndpointsBlock(routesCreator, Collections.singleton(DirectiveRoutes.class), healthBlockRef, "rest"), healthBlockRef, secretsConfigBlockRef, rdbmsBlockRef, couchbaseBlockRef, fileStorageBlockRef, mongoBlockRef, jmsBlockRef)
                 .withRequestLogger(system -> Logging.getLogger(system.classicSystem(), "requests-logging"))
                 .withRequestsMessageFunction(RequestMetrics.DEFAULT_MESSAGE_FUNCTION)
                 .withRequestsStartNotificationRunnableCreator(ctx -> {
