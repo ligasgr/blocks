@@ -73,11 +73,15 @@ public class ServiceInfoActor extends AbstractBehavior<ServiceInfoProtocol.Messa
         String name = message.name;
         final Long currentValue = counters.getOrDefault(name, 0L);
         long nextValue = currentValue + message.delta;
+        if (nextValue < 0) {
+            nextValue = 0L;
+        }
         getContext().getLog().trace("{}={}", name, nextValue);
-        counters.put(name, nextValue);
+        final long finalNextValue = nextValue;
+        counters.put(name, finalNextValue);
         subscribers.forEach((subscriberName, consumer) -> {
             try {
-                consumer.accept(message.name, LongNode.valueOf(nextValue));
+                consumer.accept(message.name, LongNode.valueOf(finalNextValue));
             } catch (Exception e) {
                 getContext().getLog().error("Failed to run counter change notification for subscriber: " + subscriberName, e);
             }
