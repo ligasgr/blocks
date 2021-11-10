@@ -8,7 +8,7 @@ allprojects {
 
 subprojects {
     project.group = 'io.github.ligasgr.blocks'
-    project.version = '0.7'
+    project.version = '0.8'
     plugins.withType(JavaPlugin) {
         sourceCompatibility = 1.8
         targetCompatibility = 1.8
