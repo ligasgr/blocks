@@ -3,6 +3,8 @@ package blocks.service;
 import akka.actor.typed.ActorSystem;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
+import akka.http.javadsl.server.ExceptionHandler;
+import akka.http.javadsl.server.RejectionHandler;
 
 import java.time.Clock;
 import java.util.HashMap;
@@ -21,6 +23,8 @@ public class ServiceBuilder {
     private Function<RequestLoggingDetails, String> requestsMessageFunction = RequestMetrics.DEFAULT_MESSAGE_FUNCTION;
     private Optional<Function<BlockContext, Runnable>> requestsStartNotificationRunnableCreator = Optional.empty();
     private Optional<Function<BlockContext, Runnable>> requestsEndNotificationRunnableCreator = Optional.empty();
+    private Optional<ExceptionHandler> exceptionHandler = Optional.empty();
+    private Optional<RejectionHandler> rejectionHandler = Optional.empty();
 
     private ServiceBuilder() {
 
@@ -56,8 +60,29 @@ public class ServiceBuilder {
         return this;
     }
 
+    public ServiceBuilder withExceptionHandler(final ExceptionHandler exceptionHandler) {
+        this.exceptionHandler = Optional.of(exceptionHandler);
+        return this;
+    }
+
+    public ServiceBuilder withRejectionHandler(final RejectionHandler rejectionHandler) {
+        this.rejectionHandler = Optional.of(rejectionHandler);
+        return this;
+    }
+
     public ActorSystem<ServiceProtocol.Message> start(final Clock clock,
                                                       final ServiceConfig config) {
-        return ActorSystem.create(ServiceActor.behavior(clock, config, blocks, blockDependencies, requestsLoggerCreator, requestsMessageFunction, requestsStartNotificationRunnableCreator, requestsEndNotificationRunnableCreator), "service");
+        return ActorSystem.create(ServiceActor.behavior(
+                clock,
+                config,
+                blocks,
+                blockDependencies,
+                requestsLoggerCreator,
+                requestsMessageFunction,
+                requestsStartNotificationRunnableCreator,
+                requestsEndNotificationRunnableCreator,
+                exceptionHandler,
+                rejectionHandler
+        ), "service");
     }
 }

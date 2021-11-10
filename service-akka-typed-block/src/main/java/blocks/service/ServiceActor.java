@@ -2,6 +2,7 @@ package blocks.service;
 
 import akka.NotUsed;
 import akka.actor.CoordinatedShutdown;
+import akka.actor.typed.ActorSystem;
 import akka.actor.typed.Behavior;
 import akka.actor.typed.PostStop;
 import akka.actor.typed.javadsl.AbstractBehavior;
@@ -18,12 +19,15 @@ import akka.http.javadsl.model.HttpRequest;
 import akka.http.javadsl.model.HttpResponse;
 import akka.http.javadsl.model.StatusCodes;
 import akka.http.javadsl.server.Directives;
+import akka.http.javadsl.server.ExceptionHandler;
+import akka.http.javadsl.server.RejectionHandler;
 import akka.http.javadsl.server.Route;
 import akka.http.javadsl.server.directives.RouteAdapter;
 import akka.http.javadsl.settings.ServerSettings;
 import akka.http.javadsl.settings.WebSocketSettings;
 import akka.stream.javadsl.Flow;
 import akka.util.ByteString;
+import ch.megard.akka.http.cors.javadsl.CorsDirectives;
 import ch.megard.akka.http.cors.javadsl.settings.CorsSettings;
 import com.typesafe.config.Config;
 import org.slf4j.Logger;
@@ -79,13 +83,14 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
                                                              ServiceConfig config,
                                                              Map<BlockRef<?>, Block<?>> blocks,
                                                              final Map<BlockRef<?>, Set<BlockRef<?>>> blockDependencies,
-                                                             final Function<akka.actor.typed.ActorSystem<?>, LoggingAdapter> requestsLoggerCreator,
+                                                             final Function<ActorSystem<?>, LoggingAdapter> requestsLoggerCreator,
                                                              final Function<RequestLoggingDetails, String> requestsMessageFunction,
                                                              final Optional<Function<BlockContext, Runnable>> requestsStartNotificationRunnableCreator,
-                                                             final Optional<Function<BlockContext, Runnable>> requestsEndNotificationRunnableCreator
-    ) {
+                                                             final Optional<Function<BlockContext, Runnable>> requestsEndNotificationRunnableCreator,
+                                                             final Optional<ExceptionHandler> exceptionHandler,
+                                                             final Optional<RejectionHandler> rejectionHandler) {
         return Behaviors.setup(context -> new ServiceActor(context, clock, config, blocks, blockDependencies, requestsLoggerCreator, requestsMessageFunction,
-                requestsStartNotificationRunnableCreator, requestsEndNotificationRunnableCreator));
+                requestsStartNotificationRunnableCreator, requestsEndNotificationRunnableCreator, exceptionHandler, rejectionHandler));
     }
 
     public ServiceActor(final ActorContext<ServiceProtocol.Message> context,
@@ -93,11 +98,12 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
                         final ServiceConfig config,
                         final Map<BlockRef<?>, Block<?>> blocks,
                         final Map<BlockRef<?>, Set<BlockRef<?>>> blockDependencies,
-                        final Function<akka.actor.typed.ActorSystem<?>, LoggingAdapter> requestsLoggerCreator,
+                        final Function<ActorSystem<?>, LoggingAdapter> requestsLoggerCreator,
                         final Function<RequestLoggingDetails, String> requestsMessageFunction,
                         final Optional<Function<BlockContext, Runnable>> requestsStartNotificationRunnableCreator,
-                        final Optional<Function<BlockContext, Runnable>> requestsEndNotificationRunnableCreator
-    ) {
+                        final Optional<Function<BlockContext, Runnable>> requestsEndNotificationRunnableCreator,
+                        final Optional<ExceptionHandler> exceptionHandler,
+                        final Optional<RejectionHandler> rejectionHandler) {
         super(context);
         this.clock = clock;
         this.startInstant = clock.instant();
@@ -131,7 +137,13 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
                         actualRunnable.run();
                     }
                 },
-                () -> cors(settings, () -> route).seal());
+                () -> {
+                    Route corsSupportingRoute = cors(settings, () -> route);
+                    RejectionHandler corsRejectionHandler = CorsDirectives.corsRejectionHandler();
+                    RejectionHandler finalRejectionHandler = rejectionHandler.isPresent() ? corsRejectionHandler.withFallback(rejectionHandler.get()) : corsRejectionHandler;
+                    ExceptionHandler finalExceptionHandler = exceptionHandler.orElse(ExceptionHandler.newBuilder().build());
+                    return corsSupportingRoute.seal(finalRejectionHandler, finalExceptionHandler);
+                });
         getContext().getSelf().tell(new ServiceProtocol.BindPorts(finalRoute));
         CoordinatedShutdown.get(system.classicSystem()).addJvmShutdownHook(this::shutdownBanner);
         http = Http.get(system);
