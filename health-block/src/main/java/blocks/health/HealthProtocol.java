@@ -20,6 +20,26 @@ public interface HealthProtocol {
         public GetHealth(final ActorRef<Health> replyTo) {
             this.replyTo = replyTo;
         }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            final GetHealth getHealth = (GetHealth) o;
+            return Objects.equals(replyTo, getHealth.replyTo);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(replyTo);
+        }
+
+        @Override
+        public String toString() {
+            return "GetHealth{" +
+                    "replyTo=" + replyTo +
+                    '}';
+        }
     }
 
     class Health implements Message {
@@ -56,6 +76,26 @@ public interface HealthProtocol {
         public RegisterComponent(final String component) {
             this.component = component;
         }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            final RegisterComponent that = (RegisterComponent) o;
+            return Objects.equals(component, that.component);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(component);
+        }
+
+        @Override
+        public String toString() {
+            return "RegisterComponent{" +
+                    "component='" + component + '\'' +
+                    '}';
+        }
     }
 
     class UpdateComponentHealth implements Message {
@@ -66,6 +106,27 @@ public interface HealthProtocol {
             this.component = component;
             this.health = health;
         }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            final UpdateComponentHealth that = (UpdateComponentHealth) o;
+            return Objects.equals(component, that.component) && Objects.equals(health, that.health);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(component, health);
+        }
+
+        @Override
+        public String toString() {
+            return "UpdateComponentHealth{" +
+                    "component='" + component + '\'' +
+                    ", health=" + health +
+                    '}';
+        }
     }
 
     class SubscribeToHealthChangeUpdates implements Message {
@@ -75,6 +136,27 @@ public interface HealthProtocol {
         public SubscribeToHealthChangeUpdates(final String subscriberName, final Consumer<Pair<Boolean, ComponentHealth>> consumerFunction) {
             this.subscriberName = subscriberName;
             this.consumerFunction = consumerFunction;
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            final SubscribeToHealthChangeUpdates that = (SubscribeToHealthChangeUpdates) o;
+            return Objects.equals(subscriberName, that.subscriberName) && Objects.equals(consumerFunction, that.consumerFunction);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(subscriberName, consumerFunction);
+        }
+
+        @Override
+        public String toString() {
+            return "SubscribeToHealthChangeUpdates{" +
+                    "subscriberName='" + subscriberName + '\'' +
+                    ", consumerFunction=" + consumerFunction +
+                    '}';
         }
     }
 
@@ -94,6 +176,27 @@ public interface HealthProtocol {
             this.block = block;
             this.mandatory = mandatory;
         }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            final RegisterBlock that = (RegisterBlock) o;
+            return mandatory == that.mandatory && Objects.equals(block, that.block);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(block, mandatory);
+        }
+
+        @Override
+        public String toString() {
+            return "RegisterBlock{" +
+                    "block='" + block + '\'' +
+                    ", mandatory=" + mandatory +
+                    '}';
+        }
     }
 
     class UpdateBlockStatus implements Message {
@@ -103,6 +206,27 @@ public interface HealthProtocol {
         public UpdateBlockStatus(final String block, final BlockStatus status) {
             this.block = block;
             this.status = status;
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            final UpdateBlockStatus that = (UpdateBlockStatus) o;
+            return Objects.equals(block, that.block) && status == that.status;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(block, status);
+        }
+
+        @Override
+        public String toString() {
+            return "UpdateBlockStatus{" +
+                    "block='" + block + '\'' +
+                    ", status=" + status +
+                    '}';
         }
     }
 
