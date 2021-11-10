@@ -8,7 +8,7 @@ dependencies {
     implementation group: 'com.typesafe.akka', name: "akka-stream_${scalaBinaryVersion}", version: akkaTypedVersion
     implementation group: 'com.typesafe.akka', name: "akka-actor_${scalaBinaryVersion}", version: akkaTypedVersion
     implementation group: 'com.typesafe.akka', name: "akka-actor-typed_${scalaBinaryVersion}", version: akkaTypedVersion
-    implementation group: 'io.swagger.core.v3', name: 'swagger-annotations', version: '2.1.7'
+    implementation group: 'io.swagger.core.v3', name: 'swagger-annotations', version: '2.1.11'
     implementation group: 'javax.ws.rs', name: 'javax.ws.rs-api', version: '2.1.1'
     api project(':service-block')
 }

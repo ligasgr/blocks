@@ -5,6 +5,6 @@ plugins {
 }
 
 dependencies {
-    implementation group: 'com.typesafe', name: 'config', version: '1.4.0'
+    implementation group: 'com.typesafe', name: 'config', version: '1.4.1'
     api project(':service-block')
 }
