@@ -26,10 +26,6 @@ public abstract class ServiceProtocol {
         }
     }
 
-    static class InitializedMandatoryBlocks implements Message {
-
-    }
-
     static class InitializedAllBlocks implements Message {
 
     }

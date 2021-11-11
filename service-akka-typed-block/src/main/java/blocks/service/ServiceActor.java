@@ -55,7 +55,6 @@ import static ch.megard.akka.http.cors.javadsl.CorsDirectives.cors;
 public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
     private static final Duration TERMINATION_GRACE_PERIOD = Duration.ofSeconds(30);
     private static final Duration HARD_TERMINATION_DEADLINE = Duration.ofSeconds(10);
-    public static final ServiceProtocol.InitializedMandatoryBlocks INITIALIZED_MANDATORY_BLOCKS = new ServiceProtocol.InitializedMandatoryBlocks();
     public static final ServiceProtocol.InitializedAllBlocks INITIALIZED_ALL_BLOCKS = new ServiceProtocol.InitializedAllBlocks();
     private final Clock clock;
     private final Instant startInstant;
@@ -64,7 +63,6 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
     private final String host;
     private final Optional<Integer> httpPort;
     private final Set<BlockRef<?>> blocksToInitialize = new HashSet<>();
-    private final Set<BlockRef<?>> mandatoryBlocksToInitialize = new HashSet<>();
     private final Map<BlockRef<?>, Block<?>> blocks;
     private final Optional<Function<BlockContext, Runnable>> requestsStartNotificationRunnableCreator;
     private final Optional<Function<BlockContext, Runnable>> requestsEndNotificationRunnableCreator;
@@ -154,7 +152,6 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
         return ReceiveBuilder.<ServiceProtocol.Message>create()
                 .onMessage(ServiceProtocol.InitializeBlocks.class, message -> onInitializeBlocks())
                 .onMessage(ServiceProtocol.InitializedBlock.class, this::onInitializedBlock)
-                .onMessage(ServiceProtocol.InitializedMandatoryBlocks.class, message -> onInitializedMandatoryBlocks())
                 .onMessage(ServiceProtocol.InitializedAllBlocks.class, message -> onInitializedAllBlocks())
                 .onMessage(ServiceProtocol.BindPorts.class, this::onBindPorts)
                 .onMessage(ServiceProtocol.PortsBound.class, this::onPortsBound)
@@ -174,9 +171,6 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
         for (Map.Entry<BlockRef<?>, Block<?>> kevAndValue : blocks.entrySet()) {
             Block<?> block = kevAndValue.getValue();
             BlockRef<?> blockRef = kevAndValue.getKey();
-            if (block.isMandatory()) {
-                mandatoryBlocksToInitialize.add(blockRef);
-            }
             blocksToInitialize.add(blockRef);
             block.onInitializeBlocks(blocks);
         }
@@ -189,6 +183,10 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
         log.info("Finished initializing {}", initializedBlockRef);
         if (message.t != null) {
             log.error("Initialization of " + initializedBlockRef + " failed", message.t);
+            if (blocks.get(initializedBlockRef).isMandatory()) {
+                getContext().getLog().error("Stopping due to failed initialization of mandatory modules");
+                return Behaviors.stopped();
+            }
         } else {
             for (final BlockRef<?> key : blocksDependingOn.get(initializedBlockRef)) {
                 blockOutstandingDependencies.get(key).remove(initializedBlockRef);
@@ -202,30 +200,10 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
             triggerBlocksWithAllDependenciesMet();
         }
         blocks.values().forEach(b -> b.onInitializedBlock(initializedBlockRef));
-        mandatoryBlocksToInitialize.remove(initializedBlockRef);
-        if (mandatoryBlocksToInitialize.isEmpty()) {
-            getContext().getSelf().tell(INITIALIZED_MANDATORY_BLOCKS);
-        }
         blocksToInitialize.remove(initializedBlockRef);
         if (blocksToInitialize.isEmpty()) {
             getContext().getSelf().tell(INITIALIZED_ALL_BLOCKS);
         }
-        return Behaviors.same();
-    }
-
-    private Behavior<ServiceProtocol.Message> onInitializedMandatoryBlocks() {
-        boolean failed = false;
-        for (Map.Entry<BlockRef<?>, Block<?>> entry : blocks.entrySet()) {
-            if (entry.getValue().getStatus() == BlockStatus.FAILED) {
-                failed = true;
-                getContext().getLog().error("Failed to initialize: " + entry.getKey(), entry.getValue().failureInfo());
-            }
-        }
-        if (failed) {
-            getContext().getLog().error("Stopping due to failed initialization of mandatory modules");
-            return Behaviors.stopped();
-        }
-
         return Behaviors.same();
     }
 

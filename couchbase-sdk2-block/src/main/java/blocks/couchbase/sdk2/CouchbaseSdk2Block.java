@@ -9,16 +9,13 @@ import blocks.service.BlockContext;
 import blocks.service.BlockRef;
 import blocks.service.FutureUtils;
 import blocks.service.SecretsConfig;
-import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.CouchbaseCluster;
 import com.couchbase.client.java.cluster.BucketSettings;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
 import net.jodah.failsafe.Failsafe;
-import net.jodah.failsafe.Policy;
 import net.jodah.failsafe.RetryPolicy;
-import rx.Observable;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -74,25 +71,33 @@ public class CouchbaseSdk2Block extends AbstractBlock<Cluster> {
                     .connectTimeout(connectionTimeout.toMillis())
                     .socketConnectTimeout(Long.valueOf(socketConnectTimeout.toMillis()).intValue())
                     .build();
-            final Policy<CouchbaseCluster> initializationPolicy = new RetryPolicy<CouchbaseCluster>()
-                    .withBackoff(100, 6400, ChronoUnit.MILLIS)
-                    .withMaxDuration(waitUntilReadyTimeout)
-                    .withMaxRetries(-1);
-            return Failsafe.with(initializationPolicy).get(() -> initializeCluster(hosts, user, password, env));
+            return Failsafe.with(getRetryPolicy(waitUntilReadyTimeout)).get(() -> initializeCluster(hosts, user, password, env));
         });
-        final Function<AsyncCluster, Observable<String>> bucketNameObservableCreator = bucketForHealthCheck.isPresent()
-                ? ignored -> Observable.just(bucketForHealthCheck.get())
-                : asyncCluster -> asyncCluster.clusterManager()
-                .flatMap(cm -> cm.getBuckets().first())
-                .map(BucketSettings::name);
+        final Function<Cluster, Optional<String>> bucketNameObservableCreator = bucketForHealthCheck.isPresent()
+                ? ignored -> bucketForHealthCheck
+                : cluster -> {
+            List<BucketSettings> buckets = cluster.clusterManager().getBuckets();
+            return buckets.isEmpty() ? Optional.empty() : Optional.of(buckets.get(0).name());
+        };
+        final long startMillis = blockContext.clock.millis();
         return resultFuture
                 .thenCompose(cluster -> {
-                            final AsyncCluster asyncCluster = cluster.async();
-                            return RxJavaFutureUtils.fromObservable(bucketNameObservableCreator.apply(asyncCluster).flatMap(asyncCluster::openBucket))
+                            final Duration timeLeft = waitUntilReadyTimeout.minus(Duration.ofMillis(blockContext.clock.millis() - startMillis));
+                            return Failsafe.with(getRetryPolicy(timeLeft)).getAsync(() -> {
+                                        final Optional<String> maybeBucketName = bucketNameObservableCreator.apply(cluster);
+                                        return maybeBucketName.map(cluster::openBucket).orElseThrow(() -> new IllegalStateException("No bucket found to open"));
+                                    })
                                     .thenAccept(bucket -> couchbaseHealthCheckActor.tell(new CouchbaseSdk2HealthCheckActor.Protocol.CheckHealth()))
                                     .thenApply(ignored -> cluster);
                         }
                 );
+    }
+
+    private <T> RetryPolicy<T> getRetryPolicy(final Duration waitUntilReadyTimeout) {
+        return new RetryPolicy<T>()
+                .withBackoff(100, 6400, ChronoUnit.MILLIS)
+                .withMaxDuration(waitUntilReadyTimeout)
+                .withMaxRetries(-1);
     }
 
     private CouchbaseCluster initializeCluster(final List<String> hosts, final String user, final String password, final CouchbaseEnvironment env) {
