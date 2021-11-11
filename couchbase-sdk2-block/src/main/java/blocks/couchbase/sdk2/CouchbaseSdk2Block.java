@@ -57,6 +57,7 @@ public class CouchbaseSdk2Block extends AbstractBlock<Cluster> {
         final Duration queryTimeout = blockConfig.getDuration("queryTimeout");
         final Duration maxRequestLifetime = blockConfig.getDuration("maxRequestLifetime");
         final Duration connectionTimeout = blockConfig.getDuration("connectionTimeout");
+        final Duration socketConnectTimeout = blockConfig.getDuration("socketConnectTimeout");
         final Duration waitUntilReadyTimeout = blockConfig.getDuration("waitUntilReadyTimeout");
         final String user = blockConfig.getString("user");
         final Optional<String> bucketForHealthCheck = blockConfig.hasPath("bucketForHealthCheck") ? Optional.of(blockConfig.getString("bucketForHealthCheck")) : Optional.empty();
@@ -71,6 +72,7 @@ public class CouchbaseSdk2Block extends AbstractBlock<Cluster> {
                     .queryTimeout(queryTimeout.toMillis())
                     .maxRequestLifetime(maxRequestLifetime.toMillis())
                     .connectTimeout(connectionTimeout.toMillis())
+                    .socketConnectTimeout(Long.valueOf(socketConnectTimeout.toMillis()).intValue())
                     .build();
             final Policy<CouchbaseCluster> initializationPolicy = new RetryPolicy<CouchbaseCluster>()
                     .withBackoff(100, 6400, ChronoUnit.MILLIS)
