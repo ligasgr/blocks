@@ -283,6 +283,9 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
             BlockRef<?> key = blockKeyAndDependencies.getKey();
             blockOutstandingDependencies.get(key).addAll(dependencies);
             for (final BlockRef<?> dependency : dependencies) {
+                if (!blocksDependingOn.containsKey(dependency)) {
+                    throw new IllegalArgumentException("Block " + dependency.key + " was added as a dependency of " + key.key + " but it was not added to the list of block definitions of the service.");
+                }
                 blocksDependingOn.get(dependency).add(key);
             }
         }
