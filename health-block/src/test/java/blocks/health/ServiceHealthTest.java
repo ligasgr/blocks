@@ -24,26 +24,27 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ServiceHealthTest {
     private static final ObjectWriter OBJECT_WRITER = JsonUtil.DEFAULT_OBJECT_MAPPER.writerFor(ServiceHealth.class);
-    private static final String EXPECTED_OUTPUT = "{\n" +
-            "  \"isHealthy\" : false,\n" +
-            "  \"isInitialized\" : true,\n" +
-            "  \"blocks\" : {\n" +
-            "    \"rest\" : {\n" +
-            "      \"status\" : \"INITIALIZED\",\n" +
-            "      \"mandatory\" : true\n" +
-            "    }\n" +
-            "  },\n" +
-            "  \"dependencies\" : [ {\n" +
-            "    \"name\" : \"rest\",\n" +
-            "    \"isHealthy\" : false,\n" +
-            "    \"isInitialized\" : true,\n" +
-            "    \"error\" : \"java.lang.RuntimeException: Status code not OK\",\n" +
-            "    \"refreshedAt\" : \"1970-01-01T00:00:00.123Z\",\n" +
-            "    \"checkDurationInNanoseconds\" : 123\n" +
-            "  } ],\n" +
-            "  \"startedAt\" : \"1970-01-01T00:00:00.123Z\",\n" +
-            "  \"healthAt\" : \"1970-01-01T00:00:00.123Z\",\n" +
-            "  \"serviceName\" : \"sample\"\n" +
+    private static final String NEW_LINE = System.lineSeparator();
+    private static final String EXPECTED_OUTPUT = "{" + NEW_LINE +
+            "  \"isHealthy\" : false," + NEW_LINE +
+            "  \"isInitialized\" : true," + NEW_LINE +
+            "  \"blocks\" : {" + NEW_LINE +
+            "    \"rest\" : {" + NEW_LINE +
+            "      \"status\" : \"INITIALIZED\"," + NEW_LINE +
+            "      \"mandatory\" : true" + NEW_LINE +
+            "    }" + NEW_LINE +
+            "  }," + NEW_LINE +
+            "  \"dependencies\" : [ {" + NEW_LINE +
+            "    \"name\" : \"rest\"," + NEW_LINE +
+            "    \"isHealthy\" : false," + NEW_LINE +
+            "    \"isInitialized\" : true," + NEW_LINE +
+            "    \"error\" : \"java.lang.RuntimeException: Status code not OK\"," + NEW_LINE +
+            "    \"refreshedAt\" : \"1970-01-01T00:00:00.123Z\"," + NEW_LINE +
+            "    \"checkDurationInNanoseconds\" : 123" + NEW_LINE +
+            "  } ]," + NEW_LINE +
+            "  \"startedAt\" : \"1970-01-01T00:00:00.123Z\"," + NEW_LINE +
+            "  \"healthAt\" : \"1970-01-01T00:00:00.123Z\"," + NEW_LINE +
+            "  \"serviceName\" : \"sample\"" + NEW_LINE +
             "}";
     private Clock clock = Clock.fixed(Instant.ofEpochMilli(123L), ZoneId.of("UTC"));
 
