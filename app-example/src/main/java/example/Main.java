@@ -77,6 +77,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.node.BooleanNode;
+import com.fasterxml.jackson.databind.node.LongNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.mongodb.reactivestreams.client.FindPublisher;
 import com.mongodb.reactivestreams.client.MongoClient;
@@ -560,8 +561,8 @@ public class Main {
             this.log = log;
             this.scheduler = scheduler;
             this.serviceInfoActor = context.getBlockOutput(serviceInfoActorFuture);
-            this.serviceInfoActor.tell(new ServiceInfoProtocol.SubscribeToInfoUpdates("counterWsHandler", (name, value)-> {
-                TextMessage message = createMessage(log, Collections.singletonMap(name, value));
+            this.serviceInfoActor.tell(new ServiceInfoProtocol.SubscribeToCounterUpdates("counterWsHandler", (name, value)-> {
+                TextMessage message = createMessage(log, Collections.singletonMap(name, LongNode.valueOf(value)));
                 log.info("Got update of counter: {}", message.getStrictText());
                 queueForSession.values().forEach(q -> q.offer(message));
             }));

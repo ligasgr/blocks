@@ -38,20 +38,38 @@ public interface ServiceInfoProtocol {
         }
     }
 
-    class SubscribeToInfoUpdates implements Message {
+    class SubscribeToPropertyUpdates implements Message {
         public final String subscriberName;
         public final BiConsumer<String, JsonNode> consumerFunction;
 
-        public SubscribeToInfoUpdates(final String subscriberName, final BiConsumer<String, JsonNode> consumerFunction) {
+        public SubscribeToPropertyUpdates(final String subscriberName, final BiConsumer<String, JsonNode> consumerFunction) {
             this.subscriberName = subscriberName;
             this.consumerFunction = consumerFunction;
         }
     }
 
-    class UnSubscribeFromInfoUpdates implements Message {
+    class UnSubscribeFromPropertyUpdates implements Message {
         public final String subscriberName;
 
-        public UnSubscribeFromInfoUpdates(final String subscriberName) {
+        public UnSubscribeFromPropertyUpdates(final String subscriberName) {
+            this.subscriberName = subscriberName;
+        }
+    }
+
+    class SubscribeToCounterUpdates implements Message {
+        public final String subscriberName;
+        public final BiConsumer<String, Long> consumerFunction;
+
+        public SubscribeToCounterUpdates(final String subscriberName, final BiConsumer<String, Long> consumerFunction) {
+            this.subscriberName = subscriberName;
+            this.consumerFunction = consumerFunction;
+        }
+    }
+
+    class UnSubscribeFromCounterUpdates implements Message {
+        public final String subscriberName;
+
+        public UnSubscribeFromCounterUpdates(final String subscriberName) {
             this.subscriberName = subscriberName;
         }
     }

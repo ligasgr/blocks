@@ -21,7 +21,8 @@ public class ServiceInfoActor extends AbstractBehavior<ServiceInfoProtocol.Messa
     private final Clock clock;
     private final Map<String, Long> counters = new HashMap<>();
     private final Map<String, JsonNode> properties = new HashMap<>();
-    private final Map<String, BiConsumer<String, JsonNode>> subscribers = new HashMap<>();
+    private final Map<String, BiConsumer<String, JsonNode>> propertyUpdateSubscribers = new HashMap<>();
+    private final Map<String, BiConsumer<String, Long>> counterUpdateSubscribers = new HashMap<>();
 
     public static Behavior<ServiceInfoProtocol.Message> behavior(final Clock clock, final Map<String, JsonNode> staticProperties) {
         return Behaviors.setup(context -> new ServiceInfoActor(context,
@@ -41,8 +42,10 @@ public class ServiceInfoActor extends AbstractBehavior<ServiceInfoProtocol.Messa
                 .onMessage(ServiceInfoProtocol.GetServiceInfo.class, this::onGetServiceInfo)
                 .onMessage(ServiceInfoProtocol.SetProperty.class, this::onSetProperty)
                 .onMessage(ServiceInfoProtocol.UpdateCounter.class, this::onUpdateCounter)
-                .onMessage(ServiceInfoProtocol.SubscribeToInfoUpdates.class, this::onSubscribe)
-                .onMessage(ServiceInfoProtocol.UnSubscribeFromInfoUpdates.class, this::onUnsubscribe)
+                .onMessage(ServiceInfoProtocol.SubscribeToPropertyUpdates.class, this::onSubscribeToPropertyUpdates)
+                .onMessage(ServiceInfoProtocol.UnSubscribeFromPropertyUpdates.class, this::onUnsubscribeFromPropertyUpdates)
+                .onMessage(ServiceInfoProtocol.SubscribeToCounterUpdates.class, this::onSubscribeToCounterUpdates)
+                .onMessage(ServiceInfoProtocol.UnSubscribeFromCounterUpdates.class, this::onUnsubscribeFromCounterUpdates)
                 .build();
     }
 
@@ -59,7 +62,7 @@ public class ServiceInfoActor extends AbstractBehavior<ServiceInfoProtocol.Messa
 
     private Behavior<ServiceInfoProtocol.Message> onSetProperty(final ServiceInfoProtocol.SetProperty message) {
         properties.put(message.name, message.value);
-        subscribers.forEach((name, consumer) -> {
+        propertyUpdateSubscribers.forEach((name, consumer) -> {
             try {
                 consumer.accept(message.name, message.value);
             } catch (Exception e) {
@@ -79,9 +82,9 @@ public class ServiceInfoActor extends AbstractBehavior<ServiceInfoProtocol.Messa
         getContext().getLog().trace("{}={}", name, nextValue);
         final long finalNextValue = nextValue;
         counters.put(name, finalNextValue);
-        subscribers.forEach((subscriberName, consumer) -> {
+        counterUpdateSubscribers.forEach((subscriberName, consumer) -> {
             try {
-                consumer.accept(message.name, LongNode.valueOf(finalNextValue));
+                consumer.accept(message.name, finalNextValue);
             } catch (Exception e) {
                 getContext().getLog().error("Failed to run counter change notification for subscriber: " + subscriberName, e);
             }
@@ -89,13 +92,23 @@ public class ServiceInfoActor extends AbstractBehavior<ServiceInfoProtocol.Messa
         return Behaviors.same();
     }
 
-    private Behavior<ServiceInfoProtocol.Message> onSubscribe(final ServiceInfoProtocol.SubscribeToInfoUpdates message) {
-        subscribers.put(message.subscriberName, message.consumerFunction);
+    private Behavior<ServiceInfoProtocol.Message> onSubscribeToPropertyUpdates(final ServiceInfoProtocol.SubscribeToPropertyUpdates message) {
+        propertyUpdateSubscribers.put(message.subscriberName, message.consumerFunction);
         return Behaviors.same();
     }
 
-    private Behavior<ServiceInfoProtocol.Message> onUnsubscribe(final ServiceInfoProtocol.UnSubscribeFromInfoUpdates message) {
-        subscribers.remove(message.subscriberName);
+    private Behavior<ServiceInfoProtocol.Message> onUnsubscribeFromPropertyUpdates(final ServiceInfoProtocol.UnSubscribeFromPropertyUpdates message) {
+        propertyUpdateSubscribers.remove(message.subscriberName);
+        return Behaviors.same();
+    }
+
+    private Behavior<ServiceInfoProtocol.Message> onSubscribeToCounterUpdates(final ServiceInfoProtocol.SubscribeToCounterUpdates message) {
+        counterUpdateSubscribers.put(message.subscriberName, message.consumerFunction);
+        return Behaviors.same();
+    }
+
+    private Behavior<ServiceInfoProtocol.Message> onUnsubscribeFromCounterUpdates(final ServiceInfoProtocol.UnSubscribeFromCounterUpdates message) {
+        counterUpdateSubscribers.remove(message.subscriberName);
         return Behaviors.same();
     }
 }
