@@ -2,7 +2,6 @@ allprojects {
     repositories {
         mavenLocal()
         mavenCentral()
-        jcenter()
     }
 }
 
@@ -10,8 +9,8 @@ subprojects {
     project.group = 'io.github.ligasgr.blocks'
     project.version = '0.10'
     plugins.withType(JavaPlugin) {
-        sourceCompatibility = 1.8
-        targetCompatibility = 1.8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
         java {
             withJavadocJar()
             withSourcesJar()
