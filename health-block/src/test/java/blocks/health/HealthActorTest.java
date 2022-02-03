@@ -1,26 +1,22 @@
 package blocks.health;
 
-import akka.actor.TypedActor;
 import akka.actor.testkit.typed.javadsl.LoggingTestKit;
 import akka.actor.testkit.typed.javadsl.TestProbe;
 import akka.actor.typed.ActorRef;
-import akka.actor.typed.internal.PoisonPill;
 import blocks.service.BlockStatus;
 import blocks.testkit.BlockTestBase;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.TextNode;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -38,13 +34,14 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class HealthActorTest extends BlockTestBase {
+public class HealthActorTest extends BlockTestBase {
 
     private static final Instant START_TIME = NOW.minusSeconds(10L);
     private static final ZonedDateTime ZONED_START_TIME = ZonedDateTime.ofInstant(START_TIME, ZONE_ID);
@@ -64,30 +61,32 @@ class HealthActorTest extends BlockTestBase {
     @Mock
     private Clock clock;
 
-    @BeforeEach
+    @Before
     public void beforeEach() {
         testProbe = actorTestKit.createTestProbe();
-
-        MockitoAnnotations.openMocks(this);
-        when(clock.instant()).thenReturn(NOW);
-        when(clock.getZone()).thenReturn(ZONE_ID);
-
+        resetClockMock();
         healthActor = spawnActor(HealthActor.behavior(START_TIME, clock, Duration.ofSeconds(1), STATIC_PROPERTIES), "HealthActor");
     }
 
-    @AfterEach
-    void tearDown() {
+    @After
+    public void tearDown() {
         healthActor.tell(STOP);
+    }
+
+    private void resetClockMock() {
+        reset(clock);
+        when(clock.instant()).thenReturn(NOW);
+        when(clock.getZone()).thenReturn(ZONE_ID);
     }
 
     @Test
     public void shouldReturnHealthyAndInitializedIfNoBlocksAreRegistered() {
         LoggingTestKit.info("healthInfo.isHealthy=true")
-                .expect(
-                        actorTestKit.system(),
-                        () -> {
-                            return null;
-                        });
+            .expect(
+                actorTestKit.system(),
+                () -> {
+                    return null;
+                });
     }
 
     @Test
@@ -123,16 +122,16 @@ class HealthActorTest extends BlockTestBase {
         checkHealthWhenBlockIsInState(true, true, BlockStatus.INITIALIZED);
     }
 
-    @ParameterizedTest
-    @EnumSource(mode = EnumSource.Mode.EXCLUDE, names = {"INITIALIZED"})
-    public void shouldReportUnhealthyWhenRegisteredMandatoryBlockIsNotInitialized(final BlockStatus status) {
-        checkHealthWhenBlockIsInState(false, true, status);
+    @Test
+    public void shouldReportUnhealthyWhenRegisteredMandatoryBlockIsNotInitialized() {
+        Arrays.stream(BlockStatus.values()).filter(status -> status != BlockStatus.INITIALIZED)
+            .forEach(status -> checkHealthWhenBlockIsInState(false, true, status));
     }
 
-    @ParameterizedTest
-    @EnumSource(BlockStatus.class)
-    public void shouldReportHealthyRegardlessOfTheStatusOfNotMandatoryBlock(final BlockStatus status) {
-        checkHealthWhenBlockIsInState(true, false, status);
+    @Test
+    public void shouldReportHealthyRegardlessOfTheStatusOfNotMandatoryBlock() {
+        Arrays.stream(BlockStatus.values()).filter(status -> status != BlockStatus.INITIALIZED)
+            .forEach(status -> checkHealthWhenBlockIsInState(true, false, status));
     }
 
     @Test
@@ -158,9 +157,9 @@ class HealthActorTest extends BlockTestBase {
         final AtomicReference<ComponentHealth> latestHealthUpdate = new AtomicReference<>();
         ComponentHealth componentHealth = new ComponentHealth("TestComponent", false, false, Optional.empty(), emptyList(), ZONED_NOW, OptionalLong.empty());
         final HealthProtocol.Health testComponent = new HealthProtocol.Health(
-                new ServiceHealth(false, false, emptyMap(),
-                        singletonList(componentHealth),
-                        ZONED_START_TIME, ZONED_NOW, STATIC_PROPERTIES));
+            new ServiceHealth(false, false, emptyMap(),
+                singletonList(componentHealth),
+                ZONED_START_TIME, ZONED_NOW, STATIC_PROPERTIES));
 
         healthActor.tell(new HealthProtocol.GetHealth(testProbe.ref()));
         testProbe.expectMessage(IN_AT_MOST_THREE_SECONDS, EXPECTED_INITIAL_HEALTH);
@@ -182,14 +181,14 @@ class HealthActorTest extends BlockTestBase {
         final AtomicReference<ComponentHealth> latestHealthUpdate = new AtomicReference<>();
         ComponentHealth initialComponentHealth = new ComponentHealth("TestComponent", false, false, Optional.empty(), emptyList(), ZONED_NOW, OptionalLong.empty());
         final HealthProtocol.Health initialComponent = new HealthProtocol.Health(
-                new ServiceHealth(false, false, emptyMap(),
-                        singletonList(initialComponentHealth),
-                        ZONED_START_TIME, ZONED_NOW, STATIC_PROPERTIES));
+            new ServiceHealth(false, false, emptyMap(),
+                singletonList(initialComponentHealth),
+                ZONED_START_TIME, ZONED_NOW, STATIC_PROPERTIES));
         ComponentHealth updatedComponentHealth = new ComponentHealth("TestComponent", true, true, Optional.empty(), emptyList(), ZONED_NOW, OptionalLong.empty());
         final HealthProtocol.Health updatedComponent = new HealthProtocol.Health(
-                new ServiceHealth(true, true, emptyMap(),
-                        singletonList(updatedComponentHealth),
-                        ZONED_START_TIME, ZONED_NOW, STATIC_PROPERTIES));
+            new ServiceHealth(true, true, emptyMap(),
+                singletonList(updatedComponentHealth),
+                ZONED_START_TIME, ZONED_NOW, STATIC_PROPERTIES));
 
         healthActor.tell(new HealthProtocol.GetHealth(testProbe.ref()));
         testProbe.expectMessage(IN_AT_MOST_THREE_SECONDS, EXPECTED_INITIAL_HEALTH);
@@ -215,14 +214,14 @@ class HealthActorTest extends BlockTestBase {
         final AtomicReference<ComponentHealth> latestHealthUpdate = new AtomicReference<>();
         ComponentHealth initialComponentHealth = new ComponentHealth("TestComponent", false, false, Optional.empty(), emptyList(), ZONED_NOW, OptionalLong.empty());
         final HealthProtocol.Health initialComponent = new HealthProtocol.Health(
-                new ServiceHealth(false, false, emptyMap(),
-                        singletonList(initialComponentHealth),
-                        ZONED_START_TIME, ZONED_NOW, STATIC_PROPERTIES));
+            new ServiceHealth(false, false, emptyMap(),
+                singletonList(initialComponentHealth),
+                ZONED_START_TIME, ZONED_NOW, STATIC_PROPERTIES));
         ComponentHealth updatedComponentHealth = new ComponentHealth("TestComponent", true, true, Optional.empty(), emptyList(), ZONED_NOW, OptionalLong.empty());
         final HealthProtocol.Health updatedComponent = new HealthProtocol.Health(
-                new ServiceHealth(true, true, emptyMap(),
-                        singletonList(updatedComponentHealth),
-                        ZONED_START_TIME, ZONED_NOW, STATIC_PROPERTIES));
+            new ServiceHealth(true, true, emptyMap(),
+                singletonList(updatedComponentHealth),
+                ZONED_START_TIME, ZONED_NOW, STATIC_PROPERTIES));
 
         healthActor.tell(new HealthProtocol.GetHealth(testProbe.ref()));
         testProbe.expectMessage(IN_AT_MOST_THREE_SECONDS, EXPECTED_INITIAL_HEALTH);
@@ -250,6 +249,7 @@ class HealthActorTest extends BlockTestBase {
     private void checkHealthWhenBlockIsInState(final boolean expectedHealthyValue,
                                                final boolean mandatory,
                                                final BlockStatus blockStatus) {
+        resetClockMock();
         final HealthProtocol.Health expectedUpdatedHealth = new HealthProtocol.Health(
             new ServiceHealth(expectedHealthyValue, true, singletonMap(
                 "TestBlock", new BlockHealthInfo(blockStatus, mandatory)

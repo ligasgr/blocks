@@ -6,7 +6,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.TextNode;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -20,9 +20,9 @@ import java.util.Optional;
 import java.util.OptionalLong;
 
 import static java.util.Collections.singletonList;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertEquals;
 
-class ServiceHealthTest {
+public class ServiceHealthTest {
     private static final ObjectWriter OBJECT_WRITER = JsonUtil.DEFAULT_OBJECT_MAPPER.writerFor(ServiceHealth.class);
     private static final String NEW_LINE = System.lineSeparator();
     private static final String EXPECTED_OUTPUT = "{" + NEW_LINE +
@@ -49,7 +49,7 @@ class ServiceHealthTest {
     private Clock clock = Clock.fixed(Instant.ofEpochMilli(123L), ZoneId.of("UTC"));
 
     @Test
-    void inlinesStaticProperties() throws JsonProcessingException {
+    public void inlinesStaticProperties() throws JsonProcessingException {
         final ZonedDateTime now = ZonedDateTime.now(clock);
         final Map<String, BlockHealthInfo> blockList = new HashMap<String, BlockHealthInfo>() {{
             put("rest", new BlockHealthInfo(BlockStatus.INITIALIZED, true));

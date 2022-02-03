@@ -4,19 +4,22 @@ import akka.actor.testkit.typed.javadsl.ActorTestKit;
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
 import akka.actor.typed.Props;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.runner.RunWith;
+import org.mockito.junit.MockitoJUnitRunner;
 
+@RunWith(MockitoJUnitRunner.class)
 public abstract class BlockTestBase {
 
     protected static ActorTestKit actorTestKit;
 
-    @BeforeAll
+    @BeforeClass
     public static void beforeAll() {
         actorTestKit = ActorTestKit.create("akkaBlockTest-" + System.nanoTime());
     }
 
-    @AfterAll
+    @AfterClass
     public static void afterAll() {
         actorTestKit.shutdownTestKit();
     }
