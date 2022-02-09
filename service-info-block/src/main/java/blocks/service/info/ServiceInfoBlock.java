@@ -4,6 +4,7 @@ import akka.actor.typed.ActorRef;
 import akka.http.javadsl.server.Route;
 import blocks.service.AbstractBlock;
 import blocks.service.BlockContext;
+import blocks.service.ServiceProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 
@@ -17,6 +18,10 @@ public class ServiceInfoBlock extends AbstractBlock<ActorRef<ServiceInfoProtocol
     private final Map<String, JsonNode> staticProperties;
     private Logger log;
     private ServiceInfoRestService serviceInfoRestService;
+
+    public ServiceInfoBlock(final ServiceProperties serviceProperties) {
+        this(serviceProperties.configuredProperties);
+    }
 
     public ServiceInfoBlock() {
         this(Collections.emptyMap());
