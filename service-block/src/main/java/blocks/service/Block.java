@@ -44,4 +44,6 @@ public interface Block<T> {
     default void onInitializedBlock(BlockRef<?> blockRef) {
 
     }
+
+    BlockRef<T> ref();
 }

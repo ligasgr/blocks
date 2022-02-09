@@ -34,6 +34,10 @@ public class ServiceBuilder {
         return new ServiceBuilder();
     }
 
+    public <T> ServiceBuilder withBlock(final Block<T> block, final BlockRef<?>... dependencies) {
+        return withBlock(block.ref(), block, dependencies);
+    }
+
     public <T> ServiceBuilder withBlock(final BlockRef<T> blockRef, final Block<T> block, final BlockRef<?>... dependencies) {
         blocks.put(blockRef, block);
         blockDependencies.put(blockRef, new HashSet<>(asList(dependencies)));

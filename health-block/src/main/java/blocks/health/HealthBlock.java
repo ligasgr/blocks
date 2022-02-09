@@ -8,6 +8,7 @@ import blocks.service.BlockConfig;
 import blocks.service.BlockContext;
 import blocks.service.BlockRef;
 import blocks.service.BlockStatus;
+import blocks.service.ServiceProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 
@@ -34,6 +35,10 @@ public class HealthBlock extends AbstractBlock<ActorRef<HealthProtocol.Message>>
 
     public HealthBlock(final Map<String, JsonNode> staticProperties) {
         this.staticProperties = staticProperties;
+    }
+
+    public HealthBlock(final ServiceProperties serviceProperties) {
+        this(serviceProperties.configuredProperties);
     }
 
     @Override

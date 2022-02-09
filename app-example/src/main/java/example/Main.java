@@ -56,6 +56,7 @@ import blocks.service.RequestMetrics;
 import blocks.service.SecretsConfig;
 import blocks.service.ServiceBuilder;
 import blocks.service.ServiceConfig;
+import blocks.service.ServiceProperties;
 import blocks.service.TypesafeServiceConfig;
 import blocks.service.info.ServiceInfo;
 import blocks.service.info.ServiceInfoBlock;
@@ -96,7 +97,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import org.bson.Document;
-import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import reactor.core.publisher.Flux;
 //import rx.RxReactiveStreams;
@@ -129,6 +129,7 @@ import java.util.function.Function;
 import static akka.http.javadsl.server.PathMatchers.integerSegment;
 import static akka.http.javadsl.server.PathMatchers.remaining;
 import static akka.http.javadsl.server.PathMatchers.segment;
+import static blocks.service.ServiceProperties.Builder.serviceProperties;
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 
 public class Main {
@@ -152,8 +153,8 @@ public class Main {
 //        Function<BlockContext, WebSocketMessageHandler> wsHandlerCreator = (context) -> new WsHandler(context.context.getLog());
         Function<BlockContext, WebSocketMessageHandler> wsHandlerCreator = (context) -> new CountersAndHealthWsHandler(context.context.getLog(), context, serviceInfoBlockRef, healthBlockRef, context.context.getSystem().scheduler());
         BlockRef<KeyStore> keyStoreBlockRef = KeystoreBlock.getRef("httpsKeystore");
-        Map<String, JsonNode> staticProperties = new HashMap<>();
-        staticProperties.put("serviceName", TextNode.valueOf("app-example"));
+        final ServiceProperties staticProperties = serviceProperties()
+            .add("serviceName", "app-example").build();
         TypesafeServiceConfig config = new TypesafeServiceConfig();
         Info info = new Info()
                 .title("example app - " + config.getEnv())
@@ -176,13 +177,13 @@ public class Main {
                 });
         ServiceBuilder.newService()
                 .withBlock(keyStoreBlockRef, new KeystoreBlock("PKCS12", "p12", "https.keystore.password", secretsConfigBlockRef), secretsConfigBlockRef)
-                .withBlock(HttpsBlock.getRef("https"), new HttpsBlock(keyStoreBlockRef, "https.keystore.password", secretsConfigBlockRef), keyStoreBlockRef, secretsConfigBlockRef)
+                .withBlock(new HttpsBlock(keyStoreBlockRef, "https.keystore.password", secretsConfigBlockRef), keyStoreBlockRef, secretsConfigBlockRef)
                 .withBlock(serviceInfoBlockRef, new ServiceInfoBlock(staticProperties))
                 .withBlock(healthBlockRef, new HealthBlock(staticProperties))
-                .withBlock(SwaggerBlock.getRef("swagger"), new SwaggerBlock(info))
-                .withBlock(SwaggerUiBlock.getRef("swagger-ui"), new SwaggerUiBlock())
-                .withBlock(UiBlock.getRef("ui"), new UiBlock())
-                .withBlock(WebSocketBlock.getRef("ws"), webSocketBlock, serviceInfoBlockRef, healthBlockRef)
+                .withBlock(new SwaggerBlock(info))
+                .withBlock(new SwaggerUiBlock())
+                .withBlock(new UiBlock())
+                .withBlock(webSocketBlock, serviceInfoBlockRef, healthBlockRef)
                 .withBlock(couchbaseBlockRef, new CouchbaseBlock(healthBlockRef, secretsConfigBlockRef, "couchbase"), healthBlockRef, secretsConfigBlockRef)
 //                .withBlock(couchbaseBlockRef, new CouchbaseSdk2Block(healthBlockRef, secretsConfigBlockRef, "couchbase"), healthBlockRef, secretsConfigBlockRef)
                 .withBlock(mongoBlockRef, new MongoBlock(healthBlockRef, secretsConfigBlockRef, "mongo"), healthBlockRef, secretsConfigBlockRef)
@@ -190,7 +191,7 @@ public class Main {
                 .withBlock(rdbmsBlockRef, new RdbmsBlock(healthBlockRef, secretsConfigBlockRef, "db"), healthBlockRef, secretsConfigBlockRef)
                 .withBlock(fileStorageBlockRef, new FileStorageBlock("storage"))
                 .withBlock(jmsBlockRef, new JmsBlock(healthBlockRef, "activemq", Optional.of(blockContext -> blockContext.getBlockOutput(secretsConfigBlockRef).getSecret("activemq.securityCredentials"))), healthBlockRef, secretsConfigBlockRef)
-                .withBlock(RestEndpointsBlock.getRef("rest"), new RestEndpointsBlock(routesCreator, Collections.singleton(DirectiveRoutes.class), healthBlockRef, "rest"), healthBlockRef, secretsConfigBlockRef, rdbmsBlockRef, couchbaseBlockRef, fileStorageBlockRef, mongoBlockRef, jmsBlockRef)
+                .withBlock(new RestEndpointsBlock(routesCreator, Collections.singleton(DirectiveRoutes.class), healthBlockRef, "rest"), healthBlockRef, secretsConfigBlockRef, rdbmsBlockRef, couchbaseBlockRef, fileStorageBlockRef, mongoBlockRef, jmsBlockRef)
                 .withRequestLogger(system -> Logging.getLogger(system.classicSystem(), "requests-logging"))
                 .withRequestsMessageFunction(RequestMetrics.DEFAULT_MESSAGE_FUNCTION)
                 .withRequestsStartNotificationRunnableCreator(ctx -> {

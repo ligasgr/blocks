@@ -14,6 +14,11 @@ public abstract class AbstractBlock<T> implements Block<T> {
     }
 
     @Override
+    public BlockRef<T> ref() {
+        return getRef(this.getClass().getName());
+    }
+
+    @Override
     public CompletionStage<T> initialize(final BlockContext blockContext) {
         if (this.outputFuture != null) {
             throw new IllegalStateException(String.format("Trying to initialize block %s again", getClass()));
