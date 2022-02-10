@@ -75,6 +75,21 @@ public class ServicePropertiesTest {
         assertEquals(expected, properties.configuredProperties);
     }
 
+    @Test
+    public void shouldReturnJsonNodesVerbatimIfSpecifiedWithoutCustomTransformer() {
+        final ServiceProperties properties = serviceProperties()
+            .add("standard", TextNode.valueOf("just json node"))
+            .add("custom", IntNode.valueOf(100), i -> TextNode.valueOf("Number: " + i.asText()))
+            .build();
+
+        final Map<String, JsonNode> expected = new HashMap<>() {{
+            put("standard", TextNode.valueOf("just json node"));
+            put("custom", TextNode.valueOf("Number: 100"));
+        }};
+
+        assertEquals(expected, properties.configuredProperties);
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void shouldThrowTheExceptionWhenUnknownPropertyTypeIsUsed() {
         serviceProperties().add("clazz", this.getClass()).build();

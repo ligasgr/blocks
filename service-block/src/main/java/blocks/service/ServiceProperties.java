@@ -76,6 +76,9 @@ public class ServiceProperties {
         }
 
         private JsonNode applyStandardTransformers(final Object value) {
+            if (value instanceof JsonNode) {
+                return (JsonNode) value;
+            }
             if (objectToNode.containsKey(value.getClass())) {
                 return objectToNode.get(value.getClass()).apply(value);
             }
