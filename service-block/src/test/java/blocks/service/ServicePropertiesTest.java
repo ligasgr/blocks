@@ -46,6 +46,35 @@ public class ServicePropertiesTest {
         assertEquals(expected, properties.configuredProperties);
     }
 
+    @Test
+    public void shouldApplyCustomMarshallerFunctions() {
+        final ServiceProperties properties = serviceProperties()
+            .add("customString", "a string", s -> TextNode.valueOf("This is a custom string \""+ s + "\"."))
+            .add("regularString", "regular String")
+            .build();
+
+        final Map<String, JsonNode> expected = new HashMap<>() {{
+            put("customString", TextNode.valueOf("This is a custom string \"a string\"."));
+            put("regularString", TextNode.valueOf("regular String"));
+        }};
+
+        assertEquals(expected, properties.configuredProperties);
+    }
+
+    @Test
+    public void propertiesWithCustomTransformersTakePrecedenceOverStandardOnes() {
+        final ServiceProperties properties = serviceProperties()
+            .add("aString", "a string", s -> TextNode.valueOf("This is a custom string \""+ s + "\"."))
+            .add("aString", "regular String")
+            .build();
+
+        final Map<String, JsonNode> expected = new HashMap<>() {{
+            put("aString", TextNode.valueOf("This is a custom string \"a string\"."));
+        }};
+
+        assertEquals(expected, properties.configuredProperties);
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void shouldThrowTheExceptionWhenUnknownPropertyTypeIsUsed() {
         serviceProperties().add("clazz", this.getClass()).build();
