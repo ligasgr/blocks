@@ -247,9 +247,8 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
     }
 
     private ServerSettings customServerSettings() {
-        Config config = ((TypesafeServiceConfig) this.config).config; // This is a strong assumption, ideally we'd accept any type of config and be able to convert it into Config from Typesafe
-        ServerSettings defaultSettings = ServerSettings.create(config);
-        WebSocketSettings customWebSocketSettings = defaultSettings.getWebsocketSettings().withPeriodicKeepAliveData(() -> ByteString.fromString("{}"));
+        final ServerSettings defaultSettings = ServerSettings.create(this.config.asTypesafeConfig());
+        final WebSocketSettings customWebSocketSettings = defaultSettings.getWebsocketSettings().withPeriodicKeepAliveData(() -> ByteString.fromString("{}"));
         return defaultSettings.withWebsocketSettings(customWebSocketSettings);
     }
 

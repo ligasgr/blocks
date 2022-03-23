@@ -25,9 +25,8 @@ public class TypesafeServiceConfig implements ServiceConfig {
         return Pair.create(env, resolved);
     }
 
-    final Config config;
-
     private final String env;
+    private final Config config;
 
     public TypesafeServiceConfig() {
         this(getDefaultEnvAndConfig());
@@ -82,7 +81,6 @@ public class TypesafeServiceConfig implements ServiceConfig {
         return config.getStringList(path);
     }
 
-
     @Override
     public Map<String, String> getStringMap(String path) {
         final Config configObject = this.config.getConfig(path);
@@ -95,7 +93,6 @@ public class TypesafeServiceConfig implements ServiceConfig {
         return config.getBoolean(path);
     }
 
-
     @Override
     public boolean hasPath(final String path) {
         return config.hasPath(path);
@@ -104,5 +101,10 @@ public class TypesafeServiceConfig implements ServiceConfig {
     @Override
     public BlockConfig getBlockConfig(String path) {
         return new TypesafeBlockConfig(config.getConfig(path));
+    }
+
+    @Override
+    public Config asTypesafeConfig() {
+        return config;
     }
 }
