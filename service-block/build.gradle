@@ -3,7 +3,7 @@ plugins {
     id 'maven-publish'
     id 'signing'
 }
-U
+
 dependencies {
     api group: 'com.typesafe.akka', name: "akka-http_${scalaBinaryVersion}", version: akkaHttpVersion
     api group: 'com.typesafe.akka', name: "akka-http-jackson_${scalaBinaryVersion}", version: akkaHttpVersion
