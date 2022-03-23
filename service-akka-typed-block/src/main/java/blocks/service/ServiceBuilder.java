@@ -87,6 +87,6 @@ public class ServiceBuilder {
                 requestsEndNotificationRunnableCreator,
                 exceptionHandler,
                 rejectionHandler
-        ), "service");
+        ), "service", config.asTypesafeConfig());
     }
 }

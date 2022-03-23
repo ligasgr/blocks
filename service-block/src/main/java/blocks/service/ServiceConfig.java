@@ -1,5 +1,7 @@
 package blocks.service;
 
+import com.typesafe.config.Config;
+
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -29,4 +31,6 @@ public interface ServiceConfig {
     boolean hasPath(String path);
 
     BlockConfig getBlockConfig(String path);
+
+    Config asTypesafeConfig();
 }
