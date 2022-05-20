@@ -41,7 +41,7 @@ public class HttpsClientBlock extends AbstractBlock<Http> {
         final SecretsConfig secretsConfig = blockContext.getBlockOutput(secretsConfigBlockRef);
         final char[] privateKeyPassword = secretsConfig.getSecret(privateKeyPasswordKey).toCharArray();
         final akka.actor.typed.ActorSystem<Void> system = blockContext.context.getSystem();
-        final HttpsConnectionContext httpsContext = maybeHttpsConnectionContext.orElse(HttpsContextUtil.createHttpsContext(httpsKeystore, privateKeyPassword));
+        final HttpsConnectionContext httpsContext = maybeHttpsConnectionContext.orElseGet(() -> HttpsContextUtil.createHttpsContext(httpsKeystore, privateKeyPassword));
         final Http http = Http.get(system);
         http.setDefaultClientHttpsContext(httpsContext);
         return CompletableFuture.completedFuture(http);
