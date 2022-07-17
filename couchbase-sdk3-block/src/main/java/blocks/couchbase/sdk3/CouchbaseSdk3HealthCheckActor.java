@@ -78,7 +78,7 @@ public class CouchbaseSdk3HealthCheckActor extends AbstractBehavior<CouchbaseSdk
             .build();
     }
 
-    private Behavior<Protocol.Message> onCheckHealth(final Protocol.CheckHealth msg) {
+    private Behavior<Protocol.Message> onCheckHealth(final Protocol.CheckHealth notUsed) {
         if (couchbaseBlock.getStatus() != BlockStatus.INITIALIZED) {
             getContext().getSelf().tell(new Protocol.HealthInfo(false, couchbaseBlock.failureInfo(), Collections.emptyList()));
         } else {
@@ -92,7 +92,7 @@ public class CouchbaseSdk3HealthCheckActor extends AbstractBehavior<CouchbaseSdk
 
     private CompletionStage<Protocol.HealthInfo> runHealthCheck() {
         final Optional<ReactiveCluster> maybeCluster = couchbaseBlock.getBlockOutput();
-        if (!maybeCluster.isPresent()) {
+        if (maybeCluster.isEmpty()) {
             return CompletableFuture.completedFuture(new Protocol.HealthInfo(false, couchbaseBlock.failureInfo(), Collections.emptyList()));
         } else {
             return maybeCluster.get().diagnostics()

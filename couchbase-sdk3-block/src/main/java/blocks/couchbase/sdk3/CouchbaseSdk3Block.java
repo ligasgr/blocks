@@ -39,11 +39,11 @@ public class CouchbaseSdk3Block extends AbstractBlock<ReactiveCluster> {
         final Block<ActorRef<HealthProtocol.Message>> healthBlock = blockContext.getBlock(healthBlockRef);
         final Block<SecretsConfig> secretsConfigBlock = blockContext.getBlock(secretsConfigBlockRef);
         final Optional<ActorRef<HealthProtocol.Message>> maybeHealthActor = healthBlock.getBlockOutput();
-        if (!maybeHealthActor.isPresent()) {
+        if (maybeHealthActor.isEmpty()) {
             throw new IllegalStateException("Cannot initialize block without health actor");
         }
         final Optional<SecretsConfig> maybeSecretsConfig = secretsConfigBlock.getBlockOutput();
-        if (!maybeSecretsConfig.isPresent()) {
+        if (maybeSecretsConfig.isEmpty()) {
             throw new IllegalStateException("Cannot initialize block without secrets config");
         }
         final SecretsConfig secretsConfig = maybeSecretsConfig.get();
