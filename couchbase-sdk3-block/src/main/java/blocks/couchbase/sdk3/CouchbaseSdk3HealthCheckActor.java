@@ -1,4 +1,4 @@
-package blocks.couchbase;
+package blocks.couchbase.sdk3;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
@@ -29,29 +29,35 @@ import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.endpoint.EndpointState.CONNECTED;
 
-public class CouchbaseHealthCheckActor extends AbstractBehavior<CouchbaseHealthCheckActor.Protocol.Message> {
+public class CouchbaseSdk3HealthCheckActor extends AbstractBehavior<CouchbaseSdk3HealthCheckActor.Protocol.Message> {
     private static final Protocol.CheckHealth CHECK_HEALTH = new Protocol.CheckHealth();
     private final TimerScheduler<Protocol.Message> timer;
     private final ActorRef<HealthProtocol.Message> healthActor;
     private final Clock clock;
-    private final CouchbaseBlock couchbaseBlock;
+    private final CouchbaseSdk3Block couchbaseBlock;
     private final String blockConfigPath;
     private final Duration healthyCheckDelay;
     private final Duration unhealthyCheckDelay;
 
-    public static Behavior<Protocol.Message> behavior(
-            final ActorRef<HealthProtocol.Message> healthActor, final Clock clock, final CouchbaseBlock couchbaseBlock, final String blockConfigPath, final Duration healthyCheckDelay, final Duration unhealthyCheckDelay) {
-        return Behaviors.setup(ctx -> Behaviors.withTimers(timer -> new CouchbaseHealthCheckActor(ctx, timer, healthActor, clock, couchbaseBlock, blockConfigPath, healthyCheckDelay, unhealthyCheckDelay)));
+    public static Behavior<Protocol.Message> behavior(final ActorRef<HealthProtocol.Message> healthActor,
+                                                      final Clock clock,
+                                                      final CouchbaseSdk3Block couchbaseBlock,
+                                                      final String blockConfigPath,
+                                                      final Duration healthyCheckDelay,
+                                                      final Duration unhealthyCheckDelay) {
+        return Behaviors.setup(ctx ->
+            Behaviors.withTimers(timer ->
+                new CouchbaseSdk3HealthCheckActor(ctx, timer, healthActor, clock, couchbaseBlock, blockConfigPath, healthyCheckDelay, unhealthyCheckDelay)));
     }
 
-    public CouchbaseHealthCheckActor(final ActorContext<Protocol.Message> context,
-                                     final TimerScheduler<Protocol.Message> timer,
-                                     final ActorRef<HealthProtocol.Message> healthActor,
-                                     final Clock clock,
-                                     final CouchbaseBlock couchbaseBlock,
-                                     final String blockConfigPath,
-                                     final Duration healthyCheckDelay,
-                                     final Duration unhealthyCheckDelay) {
+    public CouchbaseSdk3HealthCheckActor(final ActorContext<Protocol.Message> context,
+                                         final TimerScheduler<Protocol.Message> timer,
+                                         final ActorRef<HealthProtocol.Message> healthActor,
+                                         final Clock clock,
+                                         final CouchbaseSdk3Block couchbaseBlock,
+                                         final String blockConfigPath,
+                                         final Duration healthyCheckDelay,
+                                         final Duration unhealthyCheckDelay) {
         super(context);
         this.timer = timer;
         this.healthActor = healthActor;
@@ -67,9 +73,9 @@ public class CouchbaseHealthCheckActor extends AbstractBehavior<CouchbaseHealthC
     @Override
     public Receive<Protocol.Message> createReceive() {
         return ReceiveBuilder.<Protocol.Message>create()
-                .onMessage(Protocol.CheckHealth.class, this::onCheckHealth)
-                .onMessage(Protocol.HealthInfo.class, this::onHealthInfo)
-                .build();
+            .onMessage(Protocol.CheckHealth.class, this::onCheckHealth)
+            .onMessage(Protocol.HealthInfo.class, this::onHealthInfo)
+            .build();
     }
 
     private Behavior<Protocol.Message> onCheckHealth(final Protocol.CheckHealth msg) {
@@ -85,17 +91,17 @@ public class CouchbaseHealthCheckActor extends AbstractBehavior<CouchbaseHealthC
     }
 
     private CompletionStage<Protocol.HealthInfo> runHealthCheck() {
-        Optional<ReactiveCluster> maybeCluster = couchbaseBlock.getBlockOutput();
+        final Optional<ReactiveCluster> maybeCluster = couchbaseBlock.getBlockOutput();
         if (!maybeCluster.isPresent()) {
             return CompletableFuture.completedFuture(new Protocol.HealthInfo(false, couchbaseBlock.failureInfo(), Collections.emptyList()));
         } else {
             return maybeCluster.get().diagnostics()
-                    .map(d -> d.endpoints().get(ServiceType.KV).stream()
-                            .map(endpointDiagnostics -> Pair.create(endpointDiagnostics.remote(), endpointDiagnostics.state() == CONNECTED))
-                            .filter(e -> Objects.nonNull(e.first()))
-                            .collect(Collectors.toList()))
-                    .map(endpoints -> new Protocol.HealthInfo(true, null, endpoints))
-                    .toFuture();
+                .map(d -> d.endpoints().get(ServiceType.KV).stream()
+                    .map(endpointDiagnostics -> Pair.create(endpointDiagnostics.remote(), endpointDiagnostics.state() == CONNECTED))
+                    .filter(e -> Objects.nonNull(e.first()))
+                    .collect(Collectors.toList()))
+                .map(endpoints -> new Protocol.HealthInfo(true, null, endpoints))
+                .toFuture();
         }
     }
 
@@ -108,8 +114,8 @@ public class CouchbaseHealthCheckActor extends AbstractBehavior<CouchbaseHealthC
             checkDelay = unhealthyCheckDelay;
         } else {
             final List<ComponentHealth> dependencies = msg.endpoints.stream()
-                    .map(endpointDetails -> new ComponentHealth(endpointDetails.first(), endpointDetails.second(), true, Optional.empty(), Collections.emptyList(), ZonedDateTime.now(clock), OptionalLong.empty()))
-                    .collect(Collectors.toList());
+                .map(endpointDetails -> new ComponentHealth(endpointDetails.first(), endpointDetails.second(), true, Optional.empty(), Collections.emptyList(), ZonedDateTime.now(clock), OptionalLong.empty()))
+                .collect(Collectors.toList());
             boolean allEndpointsHealthy = dependencies.stream().allMatch(c -> c.isHealthy);
             boolean isHealthy = !dependencies.isEmpty() && allEndpointsHealthy;
             ComponentHealth health = new ComponentHealth(componentName(), isHealthy, msg.initialized, Optional.empty(), dependencies, ZonedDateTime.now(clock), OptionalLong.empty());
@@ -147,10 +153,10 @@ public class CouchbaseHealthCheckActor extends AbstractBehavior<CouchbaseHealthC
             @Override
             public String toString() {
                 return "HealthInfo{" +
-                        "initialized=" + initialized +
-                        ", exception=" + exception +
-                        ", endpoints=" + endpoints +
-                        '}';
+                    "initialized=" + initialized +
+                    ", exception=" + exception +
+                    ", endpoints=" + endpoints +
+                    '}';
             }
         }
     }
