@@ -5,7 +5,7 @@ plugins {
 }
 
 dependencies {
-    api 'com.couchbase.client:java-client:3.2.3'
+    api 'com.couchbase.client:java-client:3.3.2'
     api project(':service-block')
     implementation project(':health-block')
     implementation project(':secrets-config-block')
