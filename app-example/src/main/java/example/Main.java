@@ -34,7 +34,7 @@ import akka.stream.javadsl.Sink;
 import akka.stream.javadsl.Source;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import akka.util.ByteString;
-import blocks.couchbase.CouchbaseBlock;
+import blocks.couchbase.sdk3.CouchbaseSdk3Block;
 //import blocks.couchbase.sdk2.CouchbaseSdk2Block;
 import blocks.health.HealthBlock;
 import blocks.health.HealthProtocol;
@@ -113,7 +113,6 @@ import java.security.KeyStore;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -143,7 +142,7 @@ public class Main {
         BlockRef<ActorRef<HealthProtocol.Message>> healthBlockRef = HealthBlock.getRef("health");
         BlockRef<SecretsConfig> secretsConfigBlockRef = SecretsConfigBlock.getRef("secrets-config");
         BlockRef<ConnectionPool> rdbmsBlockRef = RdbmsBlock.getRef("rdbms-db");
-        BlockRef<ReactiveCluster> couchbaseBlockRef = CouchbaseBlock.getRef("couchbase");
+        BlockRef<ReactiveCluster> couchbaseBlockRef = CouchbaseSdk3Block.getRef("couchbase");
 //        BlockRef<Cluster> couchbaseBlockRef = CouchbaseSdk2Block.getRef("couchbase");
         BlockRef<MongoClient> mongoBlockRef = MongoBlock.getRef("mongo");
         BlockRef<Storage> fileStorageBlockRef = FileStorageBlock.getRef("fs");
@@ -184,7 +183,7 @@ public class Main {
                 .withBlock(new SwaggerUiBlock())
                 .withBlock(new UiBlock())
                 .withBlock(webSocketBlock, serviceInfoBlockRef, healthBlockRef)
-                .withBlock(couchbaseBlockRef, new CouchbaseBlock(healthBlockRef, secretsConfigBlockRef, "couchbase"), healthBlockRef, secretsConfigBlockRef)
+                .withBlock(couchbaseBlockRef, new CouchbaseSdk3Block(healthBlockRef, secretsConfigBlockRef, "couchbase"), healthBlockRef, secretsConfigBlockRef)
 //                .withBlock(couchbaseBlockRef, new CouchbaseSdk2Block(healthBlockRef, secretsConfigBlockRef, "couchbase"), healthBlockRef, secretsConfigBlockRef)
                 .withBlock(mongoBlockRef, new MongoBlock(healthBlockRef, secretsConfigBlockRef, "mongo"), healthBlockRef, secretsConfigBlockRef)
                 .withBlock(secretsConfigBlockRef, new SecretsConfigBlock())

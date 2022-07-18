@@ -47,7 +47,7 @@ dependencies {
     implementation project(':ui-block')
     implementation project(':secrets-config-block')
     implementation project(':rdbms-block')
-    implementation project(':couchbase-block')
+    implementation project(':couchbase-sdk3-block')
 //    implementation project(':couchbase-sdk2-block')
     implementation project(':file-storage-block')
     implementation project(':websocket-block')
