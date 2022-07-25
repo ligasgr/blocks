@@ -19,7 +19,7 @@ public class MultipleConcurrentCalls {
                     .mapAsync(20, http::singleRequest)
                     .mapAsync(20, r -> r.entity().toStrict(1000L, system))
                     .map(e -> e.getData().utf8String())
-                    .<CompletionStage<Done>>runWith(Sink.<String>foreach(System.out::println), system);
+                    .runWith(Sink.foreach(System.out::println), system);
             System.out.println(result.toCompletableFuture().get());
         } finally {
             system.terminate();

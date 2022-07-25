@@ -9,7 +9,7 @@ public abstract class AbstractBlock<T> implements Block<T> {
     protected CompletableFuture<T> outputFuture;
 
     public static <T> BlockRef<T> getRef(final String name) {
-        return new BlockRef<>(name, new BlockTypeReference<T>() {
+        return new BlockRef<>(name, new BlockTypeReference<>() {
         });
     }
 

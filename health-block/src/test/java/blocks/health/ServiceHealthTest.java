@@ -51,11 +51,11 @@ public class ServiceHealthTest {
     @Test
     public void inlinesStaticProperties() throws JsonProcessingException {
         final ZonedDateTime now = ZonedDateTime.now(clock);
-        final Map<String, BlockHealthInfo> blockList = new HashMap<String, BlockHealthInfo>() {{
+        final Map<String, BlockHealthInfo> blockList = new HashMap<>() {{
             put("rest", new BlockHealthInfo(BlockStatus.INITIALIZED, true));
         }};
         final List<ComponentHealth> dependencies = singletonList(new ComponentHealth("rest", false, true, Optional.of("java.lang.RuntimeException: Status code not OK"), Collections.emptyList(), now, OptionalLong.of(123L)));
-        final Map<String, JsonNode> properties = new HashMap<String, JsonNode>() {{
+        final Map<String, JsonNode> properties = new HashMap<>() {{
             put("serviceName", TextNode.valueOf("sample"));
         }};
         final ServiceHealth serviceHealth = new ServiceHealth(false, true, blockList, dependencies, now, now, properties);

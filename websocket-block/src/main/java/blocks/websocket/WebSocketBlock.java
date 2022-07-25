@@ -29,6 +29,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public class WebSocketBlock extends AbstractBlock<Route> {
     private final Function<BlockContext, WebSocketMessageHandler> handlerCreator;
     private final String blockConfigPath;
@@ -68,18 +69,18 @@ public class WebSocketBlock extends AbstractBlock<Route> {
     @Override
     protected CompletableFuture<Route> getBlockOutputFuture(final BlockContext blockContext) {
         handler = handlerCreator.apply(blockContext);
-        Optional<Runnable> requestStartNotificationRunnable = requestsStartNotificationRunnableCreator.map(f -> f.apply(blockContext));
-        Optional<Runnable> requestEndNotificationRunnable = requestsEndNotificationRunnableCreator.map(f -> f.apply(blockContext));
-        BlockConfig blockConfig = blockContext.config.getBlockConfig(blockConfigPath);
-        String strippedOfFirstSlash = this.webSocketPath.charAt(0) == '/' ? this.webSocketPath.substring(1) : this.webSocketPath;
-        String[] webSocketPath = strippedOfFirstSlash.split("/");
+        final Optional<Runnable> requestStartNotificationRunnable = requestsStartNotificationRunnableCreator.map(f -> f.apply(blockContext));
+        final Optional<Runnable> requestEndNotificationRunnable = requestsEndNotificationRunnableCreator.map(f -> f.apply(blockContext));
+        final BlockConfig blockConfig = blockContext.config.getBlockConfig(blockConfigPath);
+        final String strippedOfFirstSlash = this.webSocketPath.charAt(0) == '/' ? this.webSocketPath.substring(1) : this.webSocketPath;
+        final String[] webSocketPath = strippedOfFirstSlash.split("/");
         PathMatcher0 webSocketPathMatcher = PathMatchers.segment(webSocketPath[0]);
         int i = 1;
         while (i < webSocketPath.length) {
             webSocketPathMatcher = webSocketPathMatcher.slash(webSocketPath[i]);
             i++;
         }
-        Logger log = blockContext.context.getLog();
+        final Logger log = blockContext.context.getLog();
         return CompletableFuture.completedFuture(Directives.path(webSocketPathMatcher, () ->
                 Directives.get(() -> {
                     try {
@@ -87,7 +88,7 @@ public class WebSocketBlock extends AbstractBlock<Route> {
                     } catch (Exception e) {
                         log.error("Failed to run start notification", e);
                     }
-                    Flow<Message, Message, NotUsed> keepAliveMessageFrequency = messageHandlingFlow(blockContext.context.getSystem(), blockConfig.getDuration("keepAliveMessageFrequency"))
+                    final Flow<Message, Message, NotUsed> keepAliveMessageFrequency = messageHandlingFlow(blockContext.context.getSystem(), blockConfig.getDuration("keepAliveMessageFrequency"))
                             .watchTermination((mat, eventuallyDone) -> eventuallyDone.handle((d, t) -> {
                                 try {
                                     requestEndNotificationRunnable.ifPresent(Runnable::run);
@@ -97,7 +98,7 @@ public class WebSocketBlock extends AbstractBlock<Route> {
                                 return NotUsed.getInstance();
                             }))
                             .mapMaterializedValue(v -> NotUsed.getInstance());
-                    return Directives.<NotUsed>handleWebSocketMessages(keepAliveMessageFrequency);
+                    return Directives.handleWebSocketMessages(keepAliveMessageFrequency);
                 })
         ));
     }
@@ -113,26 +114,27 @@ public class WebSocketBlock extends AbstractBlock<Route> {
         return true;
     }
 
-    protected Flow<Message, Message, NotUsed> messageHandlingFlow(ActorSystem<Void> system, final Duration keepAliveMessageFrequency) {
-        String session = handler.generateSessionId();
+    protected Flow<Message, Message, NotUsed> messageHandlingFlow(final ActorSystem<Void> system,
+                                                                  final Duration keepAliveMessageFrequency) {
+        final String session = handler.generateSessionId();
         final Logger log = system.log();
         log.info("Starting new session: " + session);
-        Pair<Sink<Message, NotUsed>, Source<Message, NotUsed>> mergingMultipleSourcesIntoSink = MergeHub.of(Message.class).preMaterialize(system);
-        Sink<Message, NotUsed> outgoingMessagesSink = mergingMultipleSourcesIntoSink.first();
-        Source<Message, NotUsed> outgoingMessagesSource = mergingMultipleSourcesIntoSink.second();
-        Source<Message, Subscriber<Message>> incomingMessagesSource = Source.asSubscriber();
-        SourceQueueWithComplete<TextMessage> outgoingMessageQueue = Source.<TextMessage>queue(0, OverflowStrategy.backpressure())
+        final Pair<Sink<Message, NotUsed>, Source<Message, NotUsed>> mergingMultipleSourcesIntoSink = MergeHub.of(Message.class).preMaterialize(system);
+        final Sink<Message, NotUsed> outgoingMessagesSink = mergingMultipleSourcesIntoSink.first();
+        final Source<Message, NotUsed> outgoingMessagesSource = mergingMultipleSourcesIntoSink.second();
+        final Source<Message, Subscriber<Message>> incomingMessagesSource = Source.asSubscriber();
+        final SourceQueueWithComplete<TextMessage> outgoingMessageQueue = Source.<TextMessage>queue(0, OverflowStrategy.backpressure())
                 .map(v -> (Message) v)
                 .toMat(outgoingMessagesSink, Keep.left())
                 .run(system);
         handler.registerOutgoingQueue(session, outgoingMessageQueue);
-        Subscriber<Message> incomingMessagesSubscriber = incomingMessagesSource
+        final Subscriber<Message> incomingMessagesSubscriber = incomingMessagesSource
                 .recover(exceptionLoggingFunction(session, outgoingMessageQueue))
                 .via(messageHandlingFlow(session, outgoingMessageQueue))
                 .toMat(outgoingMessagesSink, Keep.left())
                 .run(system);
-        Sink<Message, NotUsed> messageConsumingSink = Sink.fromSubscriber(incomingMessagesSubscriber);
-        Source<Message, NotUsed> output = outgoingMessagesSource
+        final Sink<Message, NotUsed> messageConsumingSink = Sink.fromSubscriber(incomingMessagesSubscriber);
+        final Source<Message, NotUsed> output = outgoingMessagesSource
                 .map(v -> {
                     String asText = v.isText() && v.asTextMessage().isStrict() ? v.asTextMessage().getStrictText() : v.toString();
                     log.debug("Sending out: {}", asText);
@@ -143,10 +145,11 @@ public class WebSocketBlock extends AbstractBlock<Route> {
 
     }
 
-    private PartialFunction<Throwable, Message> exceptionLoggingFunction(String session, SourceQueueWithComplete<TextMessage> queue) {
-        return new JavaPartialFunction<Throwable, Message>() {
+    private PartialFunction<Throwable, Message> exceptionLoggingFunction(final String session,
+                                                                         final SourceQueueWithComplete<TextMessage> queue) {
+        return new JavaPartialFunction<>() {
             @Override
-            public Message apply(Throwable throwable, boolean isCheck) {
+            public Message apply(final Throwable throwable, final boolean isCheck) {
                 if (isCheck) {
                     return null;
                 } else {
@@ -156,8 +159,9 @@ public class WebSocketBlock extends AbstractBlock<Route> {
         };
     }
 
-    private Flow<Message, Message, NotUsed> messageHandlingFlow(String session, SourceQueueWithComplete<TextMessage> queue) {
-        JavaPartialFunction<Message, Message> partialFunction = new JavaPartialFunction<Message, Message>() {
+    private Flow<Message, Message, NotUsed> messageHandlingFlow(final String session,
+                                                                final SourceQueueWithComplete<TextMessage> queue) {
+        final JavaPartialFunction<Message, Message> partialFunction = new JavaPartialFunction<>() {
             @Override
             public Message apply(Message msg, boolean isCheck) {
                 if (isCheck) {

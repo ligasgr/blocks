@@ -87,7 +87,7 @@ public class CouchbaseSdk2HealthCheckActor extends AbstractBehavior<CouchbaseSdk
 
     private CompletionStage<Protocol.HealthInfo> runHealthCheck() {
         Optional<Cluster> maybeCluster = couchbaseSdk2Block.getBlockOutput();
-        if (!maybeCluster.isPresent()) {
+        if (maybeCluster.isEmpty()) {
             return CompletableFuture.completedFuture(new Protocol.HealthInfo(false, couchbaseSdk2Block.failureInfo(), Collections.emptyList()));
         } else {
             return RxJavaFutureUtils.fromObservable(maybeCluster.get().async().diagnostics()

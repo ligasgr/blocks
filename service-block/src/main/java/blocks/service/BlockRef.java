@@ -7,9 +7,9 @@ public class BlockRef<T> implements Comparable<BlockTypeReference<T>> {
     public final String key;
     public final BlockTypeReference<T> type;
 
-    public BlockRef(String key, Class<T> type) {
+    public BlockRef(final String key, final Class<T> type) {
         this.key = key;
-        this.type = new BlockTypeReference<T>() {
+        this.type = new BlockTypeReference<>() {
             @Override
             public Type getType() {
                 return type;
@@ -17,7 +17,7 @@ public class BlockRef<T> implements Comparable<BlockTypeReference<T>> {
         };
     }
 
-    public BlockRef(String key, BlockTypeReference<T> type) {
+    public BlockRef(final String key, final BlockTypeReference<T> type) {
         this.key = key;
         this.type = type;
     }

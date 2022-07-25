@@ -78,7 +78,7 @@ public class RdbmsHealthCheckActor extends AbstractBehavior<RdbmsHealthCheckActo
 
     private CompletionStage<Protocol.HealthInfo> runHealthCheck() {
         Optional<ConnectionPool> maybeConnectionFactory = rdbmsBlock.getBlockOutput();
-        if (!maybeConnectionFactory.isPresent()) {
+        if (maybeConnectionFactory.isEmpty()) {
             return CompletableFuture.completedFuture(new Protocol.HealthInfo(false, rdbmsBlock.failureInfo()));
         } else {
             return Flux.usingWhen(maybeConnectionFactory.get().create(), conn ->

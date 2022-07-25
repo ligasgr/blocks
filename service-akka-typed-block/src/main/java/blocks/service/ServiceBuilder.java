@@ -16,7 +16,8 @@ import java.util.function.Function;
 
 import static java.util.Arrays.asList;
 
-public class ServiceBuilder {
+@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+public final class ServiceBuilder {
     private final Map<BlockRef<?>, Block<?>> blocks = new HashMap<>();
     private final Map<BlockRef<?>, Set<BlockRef<?>>> blockDependencies = new HashMap<>();
     private Function<ActorSystem<?>, LoggingAdapter> requestsLoggerCreator = system -> Logging.getLogger(system.classicSystem(), "http-metrics");
@@ -38,7 +39,9 @@ public class ServiceBuilder {
         return withBlock(block.ref(), block, dependencies);
     }
 
-    public <T> ServiceBuilder withBlock(final BlockRef<T> blockRef, final Block<T> block, final BlockRef<?>... dependencies) {
+    public <T> ServiceBuilder withBlock(final BlockRef<T> blockRef,
+                                        final Block<T> block,
+                                        final BlockRef<?>... dependencies) {
         blocks.put(blockRef, block);
         blockDependencies.put(blockRef, new HashSet<>(asList(dependencies)));
         return this;

@@ -77,7 +77,7 @@ public class MongoHealthCheckActor extends AbstractBehavior<MongoHealthCheckActo
 
     private CompletionStage<Protocol.HealthInfo> runHealthCheck() {
         Optional<MongoClient> maybeClient = mongoBlock.getBlockOutput();
-        if (!maybeClient.isPresent()) {
+        if (maybeClient.isEmpty()) {
             return CompletableFuture.completedFuture(new Protocol.HealthInfo(false, mongoBlock.failureInfo(), Collections.emptyList()));
         } else {
             List<Pair<String, Boolean>> endpoints = maybeClient.get().getClusterDescription().getServerDescriptions().stream()

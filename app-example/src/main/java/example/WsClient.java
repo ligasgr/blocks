@@ -21,34 +21,32 @@ import akka.stream.javadsl.SourceQueueWithComplete;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ExecutionException;
 
 import static java.util.Arrays.asList;
 
 public class WsClient {
-    public static void main(String[] args)  {
-        ActorSystem system = ActorSystem.create();
+    public static void main(final String[] args)  {
+        final ActorSystem system = ActorSystem.create();
         try {
             final WebSocketRequest req = WebSocketRequest.create("ws://127.0.0.1:8080/ws");
             final Http http = Http.get(system);
             final Flow<Message, Message, CompletionStage<WebSocketUpgradeResponse>> webSocketFlow = http.webSocketClientFlow(req);
 
-            Source<String, SourceQueueWithComplete<String>> queue = Source.queue(0, OverflowStrategy.backpressure());
-            Pair<SourceQueueWithComplete<String>, Source<String, NotUsed>> queueAndSource = queue.preMaterialize(system);
-            SourceQueueWithComplete<String> messageSourceQueue = queueAndSource.first();
-            Source<Message, NotUsed> messageSource = queueAndSource.second()
+            final Source<String, SourceQueueWithComplete<String>> queue = Source.queue(0, OverflowStrategy.backpressure());
+            final Pair<SourceQueueWithComplete<String>, Source<String, NotUsed>> queueAndSource = queue.preMaterialize(system);
+            final SourceQueueWithComplete<String> messageSourceQueue = queueAndSource.first();
+            final Source<Message, NotUsed> messageSource = queueAndSource.second()
                     .throttle(1, Duration.ofSeconds(2L))
                     .map(TextMessage::create);
 
-            Sink<Message, CompletionStage<Done>> messageSink =
+            final Sink<Message, CompletionStage<Done>> messageSink =
                     Sink.foreach(message -> {
-                        final Graph<SinkShape<String>, CompletionStage<String>> sink = Sink.<String>head();
+                        final Graph<SinkShape<String>, CompletionStage<String>> sink = Sink.head();
                         String responseText = message.asTextMessage().getStreamedText()
                                 .fold(new StringBuilder(), StringBuilder::append)
                                 .map(StringBuilder::toString)
-                                .<CompletionStage<String>>runWith(sink, system).toCompletableFuture().get();
+                                .runWith(sink, system).toCompletableFuture().get();
                         System.out.println("Received text message: [" + responseText + "]");
                         if (responseText.contains("Bye")) {
                             System.out.println("Got 'Bye'... Finishing!");
@@ -56,16 +54,16 @@ public class WsClient {
                         }
                     });
 
-            Pair<Pair<NotUsed, CompletionStage<WebSocketUpgradeResponse>>, CompletionStage<Done>> result = messageSource
+            final Pair<Pair<NotUsed, CompletionStage<WebSocketUpgradeResponse>>, CompletionStage<Done>> result = messageSource
                     .viaMat(webSocketFlow, Keep.both())
                     .toMat(messageSink, Keep.both())
                     .run(system);
 
-            List<String> messages = asList("Hello", "Bonjour", "Aloha", "Czesc"/*, "Bye"*/);
-            for (String message : messages) {
-                System.out.println("Enqueueing " + message);
-                messageSourceQueue.offer(message);
-            }
+            final List<String> messages = asList("Hello", "Bonjour", "Aloha", "Czesc"/*, "Bye"*/);
+            messages.forEach(message -> {
+                    System.out.println("Enqueueing " + message);
+                    messageSourceQueue.offer(message);
+                });
 
             final CompletionStage<Done> connected = result.first().second().thenApply(upgrade -> {
                 if (upgrade.response().status().intValue() == StatusCodes.SwitchingProtocols().intValue()) {
@@ -77,7 +75,7 @@ public class WsClient {
 
             connected.thenCompose(done -> result.second().toCompletableFuture()).toCompletableFuture().get();
             System.out.println("Finished");
-        } catch (Exception e) {
+        } catch (final Exception e) {
             System.err.println(e);
         } finally {
             system.terminate();
