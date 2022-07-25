@@ -29,7 +29,6 @@ import akka.stream.javadsl.Flow;
 import akka.util.ByteString;
 import ch.megard.akka.http.cors.javadsl.CorsDirectives;
 import ch.megard.akka.http.cors.javadsl.settings.CorsSettings;
-import com.typesafe.config.Config;
 import org.slf4j.Logger;
 import scala.compat.java8.functionConverterImpls.FromJavaFunction;
 
@@ -52,10 +51,13 @@ import java.util.stream.Stream;
 
 import static ch.megard.akka.http.cors.javadsl.CorsDirectives.cors;
 
+@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
+    public static final ServiceProtocol.InitializedAllBlocks INITIALIZED_ALL_BLOCKS = new ServiceProtocol.InitializedAllBlocks();
+
     private static final Duration TERMINATION_GRACE_PERIOD = Duration.ofSeconds(30);
     private static final Duration HARD_TERMINATION_DEADLINE = Duration.ofSeconds(10);
-    public static final ServiceProtocol.InitializedAllBlocks INITIALIZED_ALL_BLOCKS = new ServiceProtocol.InitializedAllBlocks();
+
     private final Clock clock;
     private final Instant startInstant;
     private final Logger log;
@@ -77,9 +79,9 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
     private final AtomicReference<Runnable> requestsStartNotificationRunnable = new AtomicReference<>();
     private final AtomicReference<Runnable> requestsEndNotificationRunnable = new AtomicReference<>();
 
-    public static Behavior<ServiceProtocol.Message> behavior(Clock clock,
-                                                             ServiceConfig config,
-                                                             Map<BlockRef<?>, Block<?>> blocks,
+    public static Behavior<ServiceProtocol.Message> behavior(final Clock clock,
+                                                             final ServiceConfig config,
+                                                             final Map<BlockRef<?>, Block<?>> blocks,
                                                              final Map<BlockRef<?>, Set<BlockRef<?>>> blockDependencies,
                                                              final Function<ActorSystem<?>, LoggingAdapter> requestsLoggerCreator,
                                                              final Function<RequestLoggingDetails, String> requestsMessageFunction,
@@ -136,10 +138,10 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
                     }
                 },
                 () -> {
-                    Route corsSupportingRoute = cors(settings, () -> route);
-                    RejectionHandler corsRejectionHandler = CorsDirectives.corsRejectionHandler();
-                    RejectionHandler finalRejectionHandler = rejectionHandler.isPresent() ? corsRejectionHandler.withFallback(rejectionHandler.get()) : corsRejectionHandler;
-                    ExceptionHandler finalExceptionHandler = exceptionHandler.orElse(ExceptionHandler.newBuilder().build());
+                    final Route corsSupportingRoute = cors(settings, () -> route);
+                    final RejectionHandler corsRejectionHandler = CorsDirectives.corsRejectionHandler();
+                    final RejectionHandler finalRejectionHandler = rejectionHandler.isPresent() ? corsRejectionHandler.withFallback(rejectionHandler.get()) : corsRejectionHandler;
+                    final ExceptionHandler finalExceptionHandler = exceptionHandler.orElse(ExceptionHandler.newBuilder().build());
                     return corsSupportingRoute.seal(finalRejectionHandler, finalExceptionHandler);
                 });
         getContext().getSelf().tell(new ServiceProtocol.BindPorts(finalRoute));
@@ -157,7 +159,7 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
                 .onMessage(ServiceProtocol.PortsBound.class, this::onPortsBound)
                 .onMessage(ServiceProtocol.PortsFailedToBind.class, this::onPortsFailedToBind)
                 .onSignal(PostStop.class, signal -> {
-                    HttpTerminated artificialTerminated = akka.http.scaladsl.Http.HttpServerTerminated$.MODULE$;
+                    final HttpTerminated artificialTerminated = akka.http.scaladsl.Http.HttpServerTerminated$.MODULE$;
                     serverBindings.stream().map(sb -> sb.terminate(TERMINATION_GRACE_PERIOD))
                             .reduce(CompletableFuture.completedFuture(artificialTerminated), (prev, current) -> prev.thenCompose(sb -> current))
                             .whenComplete((terminated, t) -> getContext().getSystem().terminate());
@@ -169,8 +171,8 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
     private Behavior<ServiceProtocol.Message> onInitializeBlocks() {
         log.info("Starting block initialization...");
         for (Map.Entry<BlockRef<?>, Block<?>> kevAndValue : blocks.entrySet()) {
-            Block<?> block = kevAndValue.getValue();
-            BlockRef<?> blockRef = kevAndValue.getKey();
+            final Block<?> block = kevAndValue.getValue();
+            final BlockRef<?> blockRef = kevAndValue.getKey();
             blocksToInitialize.add(blockRef);
             block.onInitializeBlocks(blocks);
         }
@@ -179,7 +181,7 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
     }
 
     private Behavior<ServiceProtocol.Message> onInitializedBlock(final ServiceProtocol.InitializedBlock<?> message) {
-        BlockRef<?> initializedBlockRef = message.blockRef;
+        final BlockRef<?> initializedBlockRef = message.blockRef;
         log.info("Finished initializing {}", initializedBlockRef);
         if (message.t != null) {
             log.error("Initialization of " + initializedBlockRef + " failed", message.t);
@@ -191,7 +193,7 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
             for (final BlockRef<?> key : blocksDependingOn.get(initializedBlockRef)) {
                 blockOutstandingDependencies.get(key).remove(initializedBlockRef);
             }
-            Block<?> block = blocks.get(initializedBlockRef);
+            final Block<?> block = blocks.get(initializedBlockRef);
             if (block.getStatus() == BlockStatus.INITIALIZED) {
                 Optional<Route> maybeRoutes = block.getCreatedRoutes();
                 maybeRoutes.ifPresent(this::addToDynamicRoutes);
@@ -215,7 +217,7 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
         }
         initializationFinishedBanner();
         this.isReady = true;
-        BlockContext blockContext = getBlockContext();
+        final BlockContext blockContext = getBlockContext();
         requestsStartNotificationRunnableCreator.ifPresent(creator -> requestsStartNotificationRunnable.set(creator.apply(blockContext)));
         requestsEndNotificationRunnableCreator.ifPresent(creator -> requestsEndNotificationRunnable.set(creator.apply(blockContext)));
         return Behaviors.same();
@@ -233,8 +235,8 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
     }
 
     private CompletionStage<List<ServerBinding>> bindRoute(final Route route) {
-        ServerSettings settings = customServerSettings();
-        List<Optional<CompletionStage<ServerBinding>>> maybeFutureBindings = new ArrayList<>();
+        final ServerSettings settings = customServerSettings();
+        final List<Optional<CompletionStage<ServerBinding>>> maybeFutureBindings = new ArrayList<>();
         maybeFutureBindings.add(httpPort.map(port -> {
             ServerBuilder serverBuilder = http.newServerAt(host, port).withSettings(settings);
             Flow<HttpRequest, HttpResponse, NotUsed> flow = route.flow(getContext().getSystem());
@@ -278,8 +280,8 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
             blocksDependingOn.put(blockRef, new HashSet<>());
         }
         for (Map.Entry<BlockRef<?>, Set<BlockRef<?>>> blockKeyAndDependencies : blockDependencies.entrySet()) {
-            Set<BlockRef<?>> dependencies = blockKeyAndDependencies.getValue();
-            BlockRef<?> key = blockKeyAndDependencies.getKey();
+            final Set<BlockRef<?>> dependencies = blockKeyAndDependencies.getValue();
+            final BlockRef<?> key = blockKeyAndDependencies.getKey();
             blockOutstandingDependencies.get(key).addAll(dependencies);
             for (final BlockRef<?> dependency : dependencies) {
                 if (!blocksDependingOn.containsKey(dependency)) {

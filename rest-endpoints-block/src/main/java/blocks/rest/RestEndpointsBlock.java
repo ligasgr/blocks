@@ -43,7 +43,7 @@ public class RestEndpointsBlock extends AbstractBlock<Route> {
         this.log.info("Initializing RestEndpointsBlock");
         Block<ActorRef<HealthProtocol.Message>> healthBlock = blockContext.getBlock(healthBlockRef);
         Optional<ActorRef<HealthProtocol.Message>> maybeHealthActor = healthBlock.getBlockOutput();
-        if (!maybeHealthActor.isPresent()) {
+        if (maybeHealthActor.isEmpty()) {
             throw new IllegalStateException("Cannot initialize block without health actor");
         }
         ActorRef<HealthProtocol.Message> healthActor = maybeHealthActor.get();

@@ -202,9 +202,7 @@ public class Main {
                 })
                 .withRequestsEndNotificationRunnableCreator(ctx -> {
                     final ActorRef<ServiceInfoProtocol.Message> blockOutput = ctx.getBlockOutput(serviceInfoBlockRef);
-                    return () -> {
-                        blockOutput.tell(new ServiceInfoProtocol.UpdateCounter("activeRequests", -1L));
-                    };
+                    return () -> blockOutput.tell(new ServiceInfoProtocol.UpdateCounter("activeRequests", -1L));
                 })
                 .start(Clock.systemDefaultZone(), config);
     }

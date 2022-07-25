@@ -45,7 +45,7 @@ public class BlockContext {
             throw new IllegalStateException("Missing block " + key.key + " (" + key.type.getType() + "). Have you forgotten to add the block instance to list of blocks?");
         }
         Optional<B> blockOutput = (Optional<B>) block.getBlockOutput();
-        if (!blockOutput.isPresent()) {
+        if (blockOutput.isEmpty()) {
             throw new IllegalStateException("Missing output of " + key.key + " " + key.type.getType());
         }
         return blockOutput.get();

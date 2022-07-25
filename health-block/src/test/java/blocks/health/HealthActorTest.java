@@ -45,7 +45,7 @@ public class HealthActorTest extends BlockTestBase {
 
     private static final Instant START_TIME = NOW.minusSeconds(10L);
     private static final ZonedDateTime ZONED_START_TIME = ZonedDateTime.ofInstant(START_TIME, ZONE_ID);
-    private static final Map<String, JsonNode> STATIC_PROPERTIES = new HashMap<String, JsonNode>() {
+    private static final Map<String, JsonNode> STATIC_PROPERTIES = new HashMap<>() {
         {
             this.put("serviceName", TextNode.valueOf("test-service"));
         }
@@ -84,9 +84,7 @@ public class HealthActorTest extends BlockTestBase {
         LoggingTestKit.info("healthInfo.isHealthy=true")
             .expect(
                 actorTestKit.system(),
-                () -> {
-                    return null;
-                });
+                () -> null);
     }
 
     @Test
@@ -198,7 +196,7 @@ public class HealthActorTest extends BlockTestBase {
 
         testProbe.expectMessage(IN_AT_MOST_THREE_SECONDS, initialComponent);
 
-        healthActor.tell(new HealthProtocol.SubscribeToHealthChangeUpdates("testSubscriber", (healthyAndComponentHealth) -> {
+        healthActor.tell(new HealthProtocol.SubscribeToHealthChangeUpdates("testSubscriber", healthyAndComponentHealth -> {
             latestHealthUpdate.set(healthyAndComponentHealth.second());
         }));
         healthActor.tell(new HealthProtocol.UpdateComponentHealth("TestComponent", updatedComponentHealth));
