@@ -10,8 +10,9 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static blocks.service.FutureUtils.futureOnDefaultDispatcher;
+import static java.util.Objects.requireNonNull;
 
-public class SwaggerBlock extends AbstractBlock<Route> {
+public final class SwaggerBlock extends AbstractBlock<Route> {
     private Logger log;
     private SwaggerDocService swaggerDocService;
     private final Info info;
@@ -24,6 +25,13 @@ public class SwaggerBlock extends AbstractBlock<Route> {
     public SwaggerBlock(final Info info, final String basePath) {
         this.info = info;
         this.basePath = basePath;
+        this.swaggerDocService = null;
+    }
+
+    public SwaggerBlock(final SwaggerDocService swaggerDocService) {
+        this.info = null;
+        this.basePath = null;
+        this.swaggerDocService = requireNonNull(swaggerDocService);
     }
 
     @Override
@@ -34,9 +42,12 @@ public class SwaggerBlock extends AbstractBlock<Route> {
     @Override
     protected CompletableFuture<Route> getBlockOutputFuture(final BlockContext blockContext) {
         this.log = blockContext.context.getLog();
-        swaggerDocService = new SwaggerDocService(info, basePath);
+        if (swaggerDocService == null) {
+            log.info("Crating default swagger doc service");
+            swaggerDocService = new DefaultSwaggerDocService(info, basePath);
+        }
         blockContext.blockRefs.forEach(key ->
-                swaggerDocService.addApiClasses(blockContext.getBlock(key).serviceClasses())
+            swaggerDocService.addApiClasses(blockContext.getBlock(key).serviceClasses())
         );
         return futureOnDefaultDispatcher(blockContext.context, () -> {
             log.info("Obtaining SwaggerDocService");
@@ -47,6 +58,6 @@ public class SwaggerBlock extends AbstractBlock<Route> {
     @Override
     public Optional<Route> getCreatedRoutes() {
         return Optional.of(getBlockOutput()
-                .orElseThrow(() -> new IllegalStateException("SwaggerBlock is not initialized")));
+            .orElseThrow(() -> new IllegalStateException("SwaggerBlock is not initialized")));
     }
 }
