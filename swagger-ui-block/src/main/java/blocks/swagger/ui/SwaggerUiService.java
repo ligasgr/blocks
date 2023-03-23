@@ -4,11 +4,13 @@ import akka.http.javadsl.model.Uri;
 import akka.http.javadsl.server.AllDirectives;
 import akka.http.javadsl.server.Route;
 import akka.http.scaladsl.model.StatusCodes;
+import blocks.service.RouteCreator;
 import org.webjars.WebJarAssetLocator;
 
-public class SwaggerUiService extends AllDirectives {
+public final class SwaggerUiService extends AllDirectives implements RouteCreator {
     private final WebJarAssetLocator locator = new WebJarAssetLocator();
 
+    @Override
     public Route createRoute() {
         return pathPrefix("swagger-ui", () ->
                 concat(
@@ -20,11 +22,11 @@ public class SwaggerUiService extends AllDirectives {
                         ),
                         extractUnmatchedPath((path) -> {
                             try {
-                                String fullPath = locator.getFullPath(path);
+                                final String fullPath = locator.getFullPath(path);
                                 return getFromResource(fullPath);
-                            } catch (IllegalArgumentException ie) {
+                            } catch (final IllegalArgumentException ie) {
                                 return reject();
-                            } catch (Exception e) {
+                            } catch (final Exception e) {
                                 return failWith(e);
                             }
                         })
