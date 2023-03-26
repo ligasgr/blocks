@@ -33,6 +33,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
+import java.util.concurrent.ExecutionException;
 
 import static example.Main.startApplication;
 import static org.junit.Assert.assertEquals;
@@ -60,7 +61,7 @@ public class MainIntegrationTest {
 
 
     @Test
-    public void startsTheServiceCorrectlyUntilIsFullyHealthy() throws IOException {
+    public void startsTheServiceCorrectlyUntilIsFullyHealthy() throws IOException, ExecutionException, InterruptedException {
         try (InputStream templateStream = MainIntegrationTest.class.getResourceAsStream("/TEMPLATE.conf")) {
             final String templateString = new String(Objects.requireNonNull(templateStream).readAllBytes(), StandardCharsets.UTF_8);
             final String filledTemplate = templateString
@@ -86,6 +87,8 @@ public class MainIntegrationTest {
                             ).runWith(Sink.head(), finalSystem).toCompletableFuture().get();
                     assertTrue(serviceHealth.isHealthy());
                 });
+                HttpResponse swaggerApiResponse = http.singleRequest(HttpRequest.GET("http://localhost:8080/api-docs/openapi.json")).toCompletableFuture().get();
+                assertEquals(200, swaggerApiResponse.status().intValue());
             } finally {
                 if (system != null) {
                     LOGGER.info("Stopping");
