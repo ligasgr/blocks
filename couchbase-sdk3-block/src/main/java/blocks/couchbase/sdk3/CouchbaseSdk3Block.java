@@ -18,6 +18,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 
@@ -48,6 +49,9 @@ public class CouchbaseSdk3Block extends AbstractBlock<ReactiveCluster> {
         }
         final SecretsConfig secretsConfig = maybeSecretsConfig.get();
         final BlockConfig blockConfig = blockContext.config.getBlockConfig(blockConfigPath);
+        final Optional<Integer> maybePort = blockConfig.hasPath("port")
+                ? Optional.of(blockConfig.getInt("port"))
+                : Optional.empty();
         final List<String> hosts = blockConfig.getStringList("hosts");
         final Duration queryTimeout = blockConfig.getDuration("queryTimeout");
         final Duration connectionTimeout = blockConfig.getDuration("connectionTimeout");
@@ -61,7 +65,8 @@ public class CouchbaseSdk3Block extends AbstractBlock<ReactiveCluster> {
         final CompletableFuture<ReactiveCluster> resultFuture = FutureUtils.futureOnDefaultDispatcher(blockContext.context, () -> {
             final ClusterEnvironment env = ClusterEnvironment.builder()
                 .timeoutConfig(TimeoutConfig.connectTimeout(connectionTimeout).queryTimeout(queryTimeout)).build();
-            final Cluster cluster = Cluster.connect(String.join(",", hosts),
+            final String connectionString = hosts.stream().map(h -> maybePort.map(p -> h + ":" + p).orElse(h)).collect(Collectors.joining(","));
+            final Cluster cluster = Cluster.connect(connectionString,
                 clusterOptions(user, password).environment(env));
             cluster.waitUntilReady(waitUntilReadyTimeout);
             return cluster.reactive();

@@ -55,4 +55,17 @@ dependencies {
     implementation project(':keystore-block')
     implementation project(':https-block')
     implementation project(':jms-block')
+
+    testImplementation group: 'junit', name: 'junit', version: junitVersion
+    testImplementation group: 'org.testcontainers', name: 'testcontainers', version: testContainersVersion
+    testImplementation group: 'org.testcontainers', name: 'postgresql', version: testContainersVersion
+    testImplementation group: 'org.testcontainers', name: 'couchbase', version: testContainersVersion
+    testImplementation group: 'org.testcontainers', name: 'mongodb', version: testContainersVersion
+    testImplementation group: 'org.testcontainers', name: 'kafka', version: testContainersVersion
+    testImplementation group: 'org.apache.activemq.tooling', name: 'activemq-junit', version: activeMqVersion
+    testImplementation group: 'org.apache.activemq', name: 'activemq-broker', version: activeMqVersion
+}
+
+test {
+    environment "EKEY", "kKbiyUXKAWqHl7K9"
 }

@@ -57,6 +57,7 @@ import blocks.service.SecretsConfig;
 import blocks.service.ServiceBuilder;
 import blocks.service.ServiceConfig;
 import blocks.service.ServiceProperties;
+import blocks.service.ServiceProtocol;
 import blocks.service.TypesafeServiceConfig;
 import blocks.service.info.ServiceInfo;
 import blocks.service.info.ServiceInfoBlock;
@@ -139,6 +140,10 @@ public class Main {
     }
 
     public static void main(String[] args) {
+        startApplication(new TypesafeServiceConfig());
+    }
+
+    public static ActorSystem<ServiceProtocol.Message> startApplication(final TypesafeServiceConfig config) {
         BlockRef<ActorRef<HealthProtocol.Message>> healthBlockRef = HealthBlock.getRef("health");
         BlockRef<SecretsConfig> secretsConfigBlockRef = SecretsConfigBlock.getRef("secrets-config");
         BlockRef<ConnectionPool> rdbmsBlockRef = RdbmsBlock.getRef("rdbms-db");
@@ -154,7 +159,6 @@ public class Main {
         BlockRef<KeyStore> keyStoreBlockRef = KeystoreBlock.getRef("httpsKeystore");
         final ServiceProperties staticProperties = serviceProperties()
             .add("serviceName", "app-example").build();
-        TypesafeServiceConfig config = new TypesafeServiceConfig();
         Info info = new Info()
                 .title("example app - " + config.getEnv())
                 .description("<p>" +
@@ -174,7 +178,7 @@ public class Main {
                     final ActorRef<ServiceInfoProtocol.Message> blockOutput = ctx.getBlockOutput(serviceInfoBlockRef);
                     return () -> blockOutput.tell(new ServiceInfoProtocol.UpdateCounter("activeWebSockets", -1L));
                 });
-        ServiceBuilder.newService()
+        return ServiceBuilder.newService()
                 .withBlock(keyStoreBlockRef, new KeystoreBlock("PKCS12", "p12", "https.keystore.password", secretsConfigBlockRef), secretsConfigBlockRef)
                 .withBlock(new HttpsBlock(keyStoreBlockRef, "https.keystore.password", secretsConfigBlockRef), keyStoreBlockRef, secretsConfigBlockRef)
                 .withBlock(serviceInfoBlockRef, new ServiceInfoBlock(staticProperties))

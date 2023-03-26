@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class CouchbaseSdk2Block extends AbstractBlock<Cluster> {
     private final BlockRef<ActorRef<HealthProtocol.Message>> healthBlockRef;
@@ -49,6 +50,9 @@ public class CouchbaseSdk2Block extends AbstractBlock<Cluster> {
         }
         SecretsConfig secretsConfig = maybeSecretsConfig.get();
         BlockConfig blockConfig = blockContext.config.getBlockConfig(blockConfigPath);
+        final Optional<Integer> maybePort = blockConfig.hasPath("port")
+                ? Optional.of(blockConfig.getInt("port"))
+                : Optional.empty();
         final List<String> hosts = blockConfig.getStringList("hosts");
         final Duration autoreleaseAfter = blockConfig.getDuration("autoreleaseAfter");
         final Duration queryTimeout = blockConfig.getDuration("queryTimeout");
@@ -71,7 +75,7 @@ public class CouchbaseSdk2Block extends AbstractBlock<Cluster> {
                     .connectTimeout(connectionTimeout.toMillis())
                     .socketConnectTimeout(Long.valueOf(socketConnectTimeout.toMillis()).intValue())
                     .build();
-            return Failsafe.with(getRetryPolicy(waitUntilReadyTimeout)).get(() -> initializeCluster(hosts, user, password, env));
+            return Failsafe.with(getRetryPolicy(waitUntilReadyTimeout)).get(() -> initializeCluster(hosts, user, password, env, maybePort));
         });
         final Function<Cluster, Optional<String>> bucketNameObservableCreator = bucketForHealthCheck.isPresent()
                 ? ignored -> bucketForHealthCheck
@@ -100,8 +104,9 @@ public class CouchbaseSdk2Block extends AbstractBlock<Cluster> {
                 .withMaxRetries(-1);
     }
 
-    private CouchbaseCluster initializeCluster(final List<String> hosts, final String user, final String password, final CouchbaseEnvironment env) {
-        return CouchbaseCluster.create(env, String.join(",", hosts))
+    private CouchbaseCluster initializeCluster(final List<String> hosts, final String user, final String password, final CouchbaseEnvironment env, final Optional<Integer> maybePort) {
+        final String connectionString = hosts.stream().map(h -> maybePort.map(p -> h + ":" + p).orElse(h)).collect(Collectors.joining(","));;
+        return CouchbaseCluster.create(env, connectionString)
                 .authenticate(user, password);
     }
 

@@ -1,6 +1,8 @@
 package blocks.health;
 
 import blocks.service.BlockStatus;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
 
@@ -8,7 +10,11 @@ public final class BlockHealthInfo {
     public final BlockStatus status;
     public final boolean mandatory;
 
-    public BlockHealthInfo(final BlockStatus status, final boolean mandatory) {
+    @JsonCreator
+    public BlockHealthInfo(
+            @JsonProperty("status") final BlockStatus status,
+            @JsonProperty("mandatory") final boolean mandatory
+    ) {
         this.status = status;
         this.mandatory = mandatory;
     }
@@ -29,8 +35,8 @@ public final class BlockHealthInfo {
     @Override
     public String toString() {
         return "BlockHealthInfo{" +
-            "status=" + status +
-            ", mandatory=" + mandatory +
-            '}';
+                "status=" + status +
+                ", mandatory=" + mandatory +
+                '}';
     }
 }

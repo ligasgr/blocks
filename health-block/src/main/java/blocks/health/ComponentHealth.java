@@ -1,6 +1,8 @@
 package blocks.health;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.time.ZonedDateTime;
@@ -23,13 +25,16 @@ public final class ComponentHealth {
     public final ZonedDateTime refreshedAt;
     public final OptionalLong checkDurationInNanoseconds;
 
-    public ComponentHealth(final String name,
-                           final boolean isHealthy,
-                           final boolean isInitialized,
-                           final Optional<String> error,
-                           final List<ComponentHealth> dependencies,
-                           final ZonedDateTime refreshedAt,
-                           final OptionalLong checkDurationInNanoseconds) {
+    @JsonCreator
+    public ComponentHealth(
+            @JsonProperty("name") final String name,
+            @JsonProperty("isHealthy") final boolean isHealthy,
+            @JsonProperty("isInitialized") final boolean isInitialized,
+            @JsonProperty("error") final Optional<String> error,
+            @JsonProperty("dependencies") final List<ComponentHealth> dependencies,
+            @JsonProperty("refreshedAt") final ZonedDateTime refreshedAt,
+            @JsonProperty("checkDurationInNanoseconds") final OptionalLong checkDurationInNanoseconds
+    ) {
         this(name, isHealthy, isInitialized, error, dependencies, Collections.emptyMap(), refreshedAt, checkDurationInNanoseconds);
     }
 
@@ -67,14 +72,14 @@ public final class ComponentHealth {
     @Override
     public String toString() {
         return "ComponentHealth{" +
-            "name='" + name + '\'' +
-            ", isHealthy=" + isHealthy +
-            ", isInitialized=" + isInitialized +
-            ", error=" + error +
-            ", dependencies=" + dependencies +
-            ", details=" + details +
-            ", refreshedAt=" + refreshedAt +
-            ", checkDurationInNanoseconds=" + checkDurationInNanoseconds +
-            '}';
+                "name='" + name + '\'' +
+                ", isHealthy=" + isHealthy +
+                ", isInitialized=" + isInitialized +
+                ", error=" + error +
+                ", dependencies=" + dependencies +
+                ", details=" + details +
+                ", refreshedAt=" + refreshedAt +
+                ", checkDurationInNanoseconds=" + checkDurationInNanoseconds +
+                '}';
     }
 }
