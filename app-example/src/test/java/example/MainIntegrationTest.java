@@ -85,7 +85,7 @@ public class MainIntegrationTest {
                             .mapAsync(1, // unmarshal each element
                                     bs -> unmarshal.unmarshal(bs, finalSystem)
                             ).runWith(Sink.head(), finalSystem).toCompletableFuture().get();
-                    assertTrue(serviceHealth.isHealthy());
+                    assertTrue(serviceHealth.isHealthy);
                 });
                 HttpResponse swaggerApiResponse = http.singleRequest(HttpRequest.GET("http://localhost:8080/api-docs/openapi.json")).toCompletableFuture().get();
                 assertEquals(200, swaggerApiResponse.status().intValue());

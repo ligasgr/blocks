@@ -20,7 +20,7 @@ public final class ServiceHealth {
     public static final Marshaller<ServiceHealth, RequestEntity> MARSHALLER = JsonUtil.marshaller();
 
     @JsonProperty("isHealthy")
-    private boolean isHealthy;
+    public boolean isHealthy;
     @JsonProperty("isInitialized")
     private boolean isInitialized;
     @JsonProperty("blocks")
@@ -56,16 +56,8 @@ public final class ServiceHealth {
         this.staticProperties = Collections.unmodifiableMap(staticProperties);
     }
 
-    public boolean isHealthy() {
-        return isHealthy;
-    }
-
     public void setHealthy(final boolean healthy) {
         isHealthy = healthy;
-    }
-
-    public boolean isInitialized() {
-        return isInitialized;
     }
 
     public void setInitialized(final boolean initialized) {
@@ -102,10 +94,6 @@ public final class ServiceHealth {
 
     public void setHealthAt(final ZonedDateTime healthAt) {
         this.healthAt = healthAt;
-    }
-
-    public Map<String, JsonNode> getStaticProperties() {
-        return staticProperties;
     }
 
     public void setStaticProperties(final Map<String, JsonNode> staticProperties) {
