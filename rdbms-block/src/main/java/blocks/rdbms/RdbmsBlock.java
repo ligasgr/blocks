@@ -15,10 +15,13 @@ import io.r2dbc.spi.Connection;
 import io.r2dbc.spi.ConnectionFactories;
 import io.r2dbc.spi.ConnectionFactory;
 import io.r2dbc.spi.ConnectionFactoryOptions;
+import io.r2dbc.spi.Option;
 import io.r2dbc.spi.ValidationDepth;
 import reactor.core.publisher.Flux;
 
 import java.time.Duration;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -34,11 +37,22 @@ public class RdbmsBlock extends AbstractBlock<ConnectionPool> {
     private final BlockRef<ActorRef<HealthProtocol.Message>> healthBlockRef;
     private final BlockRef<SecretsConfig> secretsConfigBlockRef;
     private final String blockConfigPath;
+    private final Map<String, Object> optionalConnectionParameters;
 
-    public RdbmsBlock(final BlockRef<ActorRef<HealthProtocol.Message>> healthBlockRef, final BlockRef<SecretsConfig> secretsConfigBlockRef, String blockConfigPath) {
+    public RdbmsBlock(final BlockRef<ActorRef<HealthProtocol.Message>> healthBlockRef,
+                      final BlockRef<SecretsConfig> secretsConfigBlockRef,
+                      final String blockConfigPath) {
+        this(healthBlockRef, secretsConfigBlockRef, blockConfigPath, Collections.emptyMap());
+    }
+
+    public RdbmsBlock(final BlockRef<ActorRef<HealthProtocol.Message>> healthBlockRef,
+                      final BlockRef<SecretsConfig> secretsConfigBlockRef,
+                      final String blockConfigPath,
+                      final Map<String, Object> optionalConnectionParameters) {
         this.healthBlockRef = healthBlockRef;
         this.secretsConfigBlockRef = secretsConfigBlockRef;
         this.blockConfigPath = blockConfigPath;
+        this.optionalConnectionParameters = optionalConnectionParameters;
     }
 
     @Override
@@ -66,27 +80,29 @@ public class RdbmsBlock extends AbstractBlock<ConnectionPool> {
         final Duration maxIdleTime = blockConfig.getDuration("maxIdleTime");
         final int initialSize = blockConfig.getInt("initialSize");
         final int maxSize = blockConfig.getInt("maxSize");
-        ActorRef<HealthProtocol.Message> healthActor = maybeHealthActor.get();
-        ActorRef<RdbmsHealthCheckActor.Protocol.Message> postgresHealthCheckActor = blockContext.context.spawn(RdbmsHealthCheckActor.behavior(healthActor, blockContext.clock, this, connectionHealthCheckQuery, blockConfigPath), "dbHealthCheckActor-" + blockConfigPath);
-        CompletableFuture<ConnectionPool> resultFuture = FutureUtils.futureOnDefaultDispatcher(blockContext.context, () -> {
-            ConnectionFactory connectionFactory = ConnectionFactories.get(ConnectionFactoryOptions.builder()
-                    .option(DRIVER, driver)
-                    .option(PROTOCOL, protocol)
-                    .option(HOST, host)
-                    .option(PORT, port)
-                    .option(USER, user)
-                    .option(PASSWORD, password)
-                    .option(DATABASE, database)
-                    .build());
-            ConnectionPoolConfiguration configuration = ConnectionPoolConfiguration.builder(connectionFactory)
-                    .name("dbPool-" + blockConfigPath)
-                    .maxIdleTime(maxIdleTime)
-                    .initialSize(initialSize)
-                    .maxSize(maxSize)
-                    .maxLifeTime(Duration.ofMillis(Long.MIN_VALUE))
-                    .registerJmx(true)
-                    .validationDepth(ValidationDepth.LOCAL)
-                    .build();
+        final ActorRef<HealthProtocol.Message> healthActor = maybeHealthActor.get();
+        final ActorRef<RdbmsHealthCheckActor.Protocol.Message> postgresHealthCheckActor = blockContext.context.spawn(RdbmsHealthCheckActor.behavior(healthActor, blockContext.clock, this, connectionHealthCheckQuery, blockConfigPath), "dbHealthCheckActor-" + blockConfigPath);
+        final CompletableFuture<ConnectionPool> resultFuture = FutureUtils.futureOnDefaultDispatcher(blockContext.context, () -> {
+            final ConnectionFactoryOptions.Builder connectionFactoryOptionsBuilder = ConnectionFactoryOptions.builder()
+                .option(DRIVER, driver)
+                .option(PROTOCOL, protocol)
+                .option(HOST, host)
+                .option(PORT, port)
+                .option(USER, user)
+                .option(PASSWORD, password)
+                .option(DATABASE, database);
+            optionalConnectionParameters.forEach((optionName, optionValue) -> connectionFactoryOptionsBuilder.option(Option.valueOf(optionName), optionValue));
+            final ConnectionFactory connectionFactory = ConnectionFactories.get(connectionFactoryOptionsBuilder.build());
+
+            final ConnectionPoolConfiguration configuration = ConnectionPoolConfiguration.builder(connectionFactory)
+                .name("dbPool-" + blockConfigPath)
+                .maxIdleTime(maxIdleTime)
+                .initialSize(initialSize)
+                .maxSize(maxSize)
+                .maxLifeTime(Duration.ofMillis(Long.MIN_VALUE))
+                .registerJmx(true)
+                .validationDepth(ValidationDepth.LOCAL)
+                .build();
             return new ConnectionPool(configuration);
         }).thenCompose(this::validate);
         resultFuture.thenAccept(ignore -> postgresHealthCheckActor.tell(new RdbmsHealthCheckActor.Protocol.CheckHealth()));
@@ -95,14 +111,15 @@ public class RdbmsBlock extends AbstractBlock<ConnectionPool> {
 
     private CompletableFuture<ConnectionPool> validate(final ConnectionPool cp) {
         return cp.warmup()
-                .flatMapMany(warmedUp -> Flux.usingWhen(cp.create(),
-                        c -> c.validate(ValidationDepth.REMOTE),
-                        Connection::close)
-                ).then().toFuture().thenApply(ignored -> cp);
+            .flatMapMany(warmedUp -> Flux.usingWhen(cp.create(),
+                c -> c.validate(ValidationDepth.REMOTE),
+                Connection::close)
+            ).then().toFuture().thenApply(ignored -> cp);
     }
 
     @Override
     public boolean isMandatory() {
         return true;
     }
+
 }
