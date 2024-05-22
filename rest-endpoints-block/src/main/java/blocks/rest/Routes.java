@@ -1,7 +1,7 @@
 package blocks.rest;
 
-import akka.actor.typed.ActorSystem;
-import akka.http.javadsl.server.Route;
+import org.apache.pekko.actor.typed.ActorSystem;
+import org.apache.pekko.http.javadsl.server.Route;
 import blocks.service.ServiceConfig;
 
 public interface Routes {

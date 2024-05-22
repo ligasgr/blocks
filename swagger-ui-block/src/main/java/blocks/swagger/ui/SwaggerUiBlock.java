@@ -1,6 +1,6 @@
 package blocks.swagger.ui;
 
-import akka.http.javadsl.server.Route;
+import org.apache.pekko.http.javadsl.server.Route;
 import blocks.service.AbstractBlock;
 import blocks.service.BlockContext;
 import blocks.service.RouteCreator;

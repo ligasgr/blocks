@@ -1,9 +1,9 @@
 package blocks.storage.file;
 
-import akka.stream.IOResult;
-import akka.stream.javadsl.Sink;
-import akka.stream.javadsl.Source;
-import akka.util.ByteString;
+import org.apache.pekko.stream.IOResult;
+import org.apache.pekko.stream.javadsl.Sink;
+import org.apache.pekko.stream.javadsl.Source;
+import org.apache.pekko.util.ByteString;
 
 import java.util.concurrent.CompletionStage;
 

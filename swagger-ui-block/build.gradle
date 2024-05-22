@@ -6,7 +6,7 @@ plugins {
 
 dependencies {
     api project(':service-block')
-    implementation group: 'com.typesafe.akka', name: "akka-stream_${scalaBinaryVersion}", version: akkaTypedVersion
+    implementation group: 'org.apache.pekko', name: "pekko-stream_${scalaBinaryVersion}", version: pekkoTypedVersion
     implementation group: 'org.webjars', name: 'webjars-locator', version: '0.42'
     api group: 'org.webjars.npm', name: 'swagger-ui-dist', version: '3.52.5'
 }

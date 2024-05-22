@@ -1,11 +1,11 @@
 package blocks.rest;
 
-import akka.actor.typed.ActorSystem;
-import akka.http.javadsl.Http;
-import akka.japi.Pair;
-import akka.japi.function.Procedure;
-import akka.stream.javadsl.Sink;
-import akka.stream.javadsl.Source;
+import org.apache.pekko.actor.typed.ActorSystem;
+import org.apache.pekko.http.javadsl.Http;
+import org.apache.pekko.japi.Pair;
+import org.apache.pekko.japi.function.Procedure;
+import org.apache.pekko.stream.javadsl.Sink;
+import org.apache.pekko.stream.javadsl.Source;
 
 import java.time.Duration;
 import java.time.ZonedDateTime;

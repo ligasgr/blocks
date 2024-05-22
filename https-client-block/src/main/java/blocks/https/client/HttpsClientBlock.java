@@ -1,7 +1,7 @@
 package blocks.https.client;
 
-import akka.http.javadsl.Http;
-import akka.http.javadsl.HttpsConnectionContext;
+import org.apache.pekko.http.javadsl.Http;
+import org.apache.pekko.http.javadsl.HttpsConnectionContext;
 import blocks.service.AbstractBlock;
 import blocks.service.BlockContext;
 import blocks.service.BlockRef;
@@ -40,7 +40,7 @@ public class HttpsClientBlock extends AbstractBlock<Http> {
         final KeyStore httpsKeystore = blockContext.getBlockOutput(keyStoreBlockRef);
         final SecretsConfig secretsConfig = blockContext.getBlockOutput(secretsConfigBlockRef);
         final char[] privateKeyPassword = secretsConfig.getSecret(privateKeyPasswordKey).toCharArray();
-        final akka.actor.typed.ActorSystem<Void> system = blockContext.context.getSystem();
+        final org.apache.pekko.actor.typed.ActorSystem<Void> system = blockContext.context.getSystem();
         final HttpsConnectionContext httpsContext = maybeHttpsConnectionContext.orElseGet(() -> HttpsContextUtil.createHttpsContext(httpsKeystore, privateKeyPassword));
         final Http http = Http.get(system);
         http.setDefaultClientHttpsContext(httpsContext);

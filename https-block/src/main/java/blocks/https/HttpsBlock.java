@@ -1,16 +1,16 @@
 package blocks.https;
 
-import akka.NotUsed;
-import akka.actor.ActorSystem;
-import akka.http.javadsl.HttpsConnectionContext;
-import akka.http.javadsl.ServerBinding;
-import akka.http.javadsl.ServerBuilder;
-import akka.http.javadsl.model.HttpRequest;
-import akka.http.javadsl.model.HttpResponse;
-import akka.http.javadsl.settings.ServerSettings;
-import akka.http.javadsl.settings.WebSocketSettings;
-import akka.stream.javadsl.Flow;
-import akka.util.ByteString;
+import org.apache.pekko.NotUsed;
+import org.apache.pekko.actor.ActorSystem;
+import org.apache.pekko.http.javadsl.HttpsConnectionContext;
+import org.apache.pekko.http.javadsl.ServerBinding;
+import org.apache.pekko.http.javadsl.ServerBuilder;
+import org.apache.pekko.http.javadsl.model.HttpRequest;
+import org.apache.pekko.http.javadsl.model.HttpResponse;
+import org.apache.pekko.http.javadsl.settings.ServerSettings;
+import org.apache.pekko.http.javadsl.settings.WebSocketSettings;
+import org.apache.pekko.stream.javadsl.Flow;
+import org.apache.pekko.util.ByteString;
 import blocks.service.AbstractBlock;
 import blocks.service.BlockContext;
 import blocks.service.BlockRef;
@@ -44,7 +44,7 @@ public class HttpsBlock extends AbstractBlock<ServerBinding> {
         KeyStore httpsKeystore = blockContext.getBlockOutput(keyStoreBlockRef);
         SecretsConfig secretsConfig = blockContext.getBlockOutput(secretsConfigBlockRef);
         final char[] privateKeyPassword = secretsConfig.getSecret(privateKeyPasswordKey).toCharArray();
-        akka.actor.typed.ActorSystem<Void> system = blockContext.context.getSystem();
+        org.apache.pekko.actor.typed.ActorSystem<Void> system = blockContext.context.getSystem();
         ServerSettings settings = customServerSettings(system.classicSystem());
         Optional<Integer> httpsPort = blockContext.config.getHttpsPort();
         if (httpsPort.isPresent()) {

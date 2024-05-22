@@ -1,6 +1,6 @@
 package blocks.service;
 
-import akka.japi.Pair;
+import org.apache.pekko.japi.Pair;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 

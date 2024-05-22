@@ -1,8 +1,8 @@
 plugins {
     id 'java'
     id "com.github.johnrengelman.shadow" version "7.1.2"
-    id "com.palantir.docker" version "0.26.0"
-    id "com.palantir.docker-run" version "0.26.0"
+    id "com.palantir.docker" version "0.36.0"
+    id "com.palantir.docker-run" version "0.36.0"
 }
 
 jar {

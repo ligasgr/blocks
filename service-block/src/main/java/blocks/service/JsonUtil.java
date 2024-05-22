@@ -1,10 +1,10 @@
 package blocks.service;
 
-import akka.http.javadsl.marshallers.jackson.Jackson;
-import akka.http.javadsl.marshalling.Marshaller;
-import akka.http.javadsl.model.HttpEntity;
-import akka.http.javadsl.model.RequestEntity;
-import akka.http.javadsl.unmarshalling.Unmarshaller;
+import org.apache.pekko.http.javadsl.marshallers.jackson.Jackson;
+import org.apache.pekko.http.javadsl.marshalling.Marshaller;
+import org.apache.pekko.http.javadsl.model.HttpEntity;
+import org.apache.pekko.http.javadsl.model.RequestEntity;
+import org.apache.pekko.http.javadsl.unmarshalling.Unmarshaller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;

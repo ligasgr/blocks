@@ -1,36 +1,35 @@
 package blocks.service;
 
-import akka.NotUsed;
-import akka.actor.CoordinatedShutdown;
-import akka.actor.typed.ActorSystem;
-import akka.actor.typed.Behavior;
-import akka.actor.typed.PostStop;
-import akka.actor.typed.javadsl.AbstractBehavior;
-import akka.actor.typed.javadsl.ActorContext;
-import akka.actor.typed.javadsl.Behaviors;
-import akka.actor.typed.javadsl.Receive;
-import akka.actor.typed.javadsl.ReceiveBuilder;
-import akka.event.LoggingAdapter;
-import akka.http.javadsl.Http;
-import akka.http.javadsl.HttpTerminated;
-import akka.http.javadsl.ServerBinding;
-import akka.http.javadsl.ServerBuilder;
-import akka.http.javadsl.model.HttpRequest;
-import akka.http.javadsl.model.HttpResponse;
-import akka.http.javadsl.model.StatusCodes;
-import akka.http.javadsl.server.Directives;
-import akka.http.javadsl.server.ExceptionHandler;
-import akka.http.javadsl.server.RejectionHandler;
-import akka.http.javadsl.server.Route;
-import akka.http.javadsl.server.directives.RouteAdapter;
-import akka.http.javadsl.settings.ServerSettings;
-import akka.http.javadsl.settings.WebSocketSettings;
-import akka.stream.javadsl.Flow;
-import akka.util.ByteString;
-import ch.megard.akka.http.cors.javadsl.CorsDirectives;
-import ch.megard.akka.http.cors.javadsl.settings.CorsSettings;
+import org.apache.pekko.NotUsed;
+import org.apache.pekko.actor.CoordinatedShutdown;
+import org.apache.pekko.actor.typed.ActorSystem;
+import org.apache.pekko.actor.typed.Behavior;
+import org.apache.pekko.actor.typed.PostStop;
+import org.apache.pekko.actor.typed.javadsl.AbstractBehavior;
+import org.apache.pekko.actor.typed.javadsl.ActorContext;
+import org.apache.pekko.actor.typed.javadsl.Behaviors;
+import org.apache.pekko.actor.typed.javadsl.Receive;
+import org.apache.pekko.actor.typed.javadsl.ReceiveBuilder;
+import org.apache.pekko.event.LoggingAdapter;
+import org.apache.pekko.http.cors.javadsl.CorsDirectives;
+import org.apache.pekko.http.cors.javadsl.settings.CorsSettings;
+import org.apache.pekko.http.javadsl.Http;
+import org.apache.pekko.http.javadsl.HttpTerminated;
+import org.apache.pekko.http.javadsl.ServerBinding;
+import org.apache.pekko.http.javadsl.ServerBuilder;
+import org.apache.pekko.http.javadsl.model.HttpRequest;
+import org.apache.pekko.http.javadsl.model.HttpResponse;
+import org.apache.pekko.http.javadsl.model.StatusCodes;
+import org.apache.pekko.http.javadsl.server.Directives;
+import org.apache.pekko.http.javadsl.server.ExceptionHandler;
+import org.apache.pekko.http.javadsl.server.RejectionHandler;
+import org.apache.pekko.http.javadsl.server.Route;
+import org.apache.pekko.http.javadsl.server.directives.RouteAdapter;
+import org.apache.pekko.http.javadsl.settings.ServerSettings;
+import org.apache.pekko.http.javadsl.settings.WebSocketSettings;
+import org.apache.pekko.stream.javadsl.Flow;
+import org.apache.pekko.util.ByteString;
 import org.slf4j.Logger;
-import scala.compat.java8.functionConverterImpls.FromJavaFunction;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -49,7 +48,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static ch.megard.akka.http.cors.javadsl.CorsDirectives.cors;
+import static org.apache.pekko.http.cors.javadsl.CorsDirectives.cors;
 
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
@@ -118,9 +117,9 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
         initializationBanner();
         buildDependenciesMappings(blocks, blockDependencies);
         final CorsSettings settings = CorsSettings.defaultSettings();
-        final Route dynamicRouteAdapter = RouteAdapter.asJava(new FromJavaFunction<>(ctx -> this.dynamicRoute.get().asScala().apply(ctx)));
+        final Route dynamicRouteAdapter = RouteAdapter.apply(ctx -> this.dynamicRoute.get().asScala().apply(ctx));
         final Route route = basicRoutes().orElse(dynamicRouteAdapter);
-        akka.actor.typed.ActorSystem<Void> system = getContext().getSystem();
+        org.apache.pekko.actor.typed.ActorSystem<Void> system = getContext().getSystem();
         final LoggingAdapter metricsLog = requestsLoggerCreator.apply(system);
         finalRoute = RequestMetrics.captureRequests(
                 metricsLog,
@@ -159,7 +158,7 @@ public class ServiceActor extends AbstractBehavior<ServiceProtocol.Message> {
                 .onMessage(ServiceProtocol.PortsBound.class, this::onPortsBound)
                 .onMessage(ServiceProtocol.PortsFailedToBind.class, this::onPortsFailedToBind)
                 .onSignal(PostStop.class, signal -> {
-                    final HttpTerminated artificialTerminated = akka.http.scaladsl.Http.HttpServerTerminated$.MODULE$;
+                    final HttpTerminated artificialTerminated = org.apache.pekko.http.scaladsl.Http.HttpServerTerminated$.MODULE$;
                     serverBindings.stream().map(sb -> sb.terminate(TERMINATION_GRACE_PERIOD))
                             .reduce(CompletableFuture.completedFuture(artificialTerminated), (prev, current) -> prev.thenCompose(sb -> current))
                             .whenComplete((terminated, t) -> getContext().getSystem().terminate());

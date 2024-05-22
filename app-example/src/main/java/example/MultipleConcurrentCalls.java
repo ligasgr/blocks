@@ -1,11 +1,11 @@
 package example;
 
-import akka.Done;
-import akka.actor.ActorSystem;
-import akka.http.javadsl.Http;
-import akka.http.javadsl.model.HttpRequest;
-import akka.stream.javadsl.Sink;
-import akka.stream.javadsl.Source;
+import org.apache.pekko.Done;
+import org.apache.pekko.actor.ActorSystem;
+import org.apache.pekko.http.javadsl.Http;
+import org.apache.pekko.http.javadsl.model.HttpRequest;
+import org.apache.pekko.stream.javadsl.Sink;
+import org.apache.pekko.stream.javadsl.Source;
 
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;

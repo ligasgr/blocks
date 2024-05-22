@@ -1,8 +1,8 @@
 package blocks.health;
 
-import akka.actor.testkit.typed.javadsl.LoggingTestKit;
-import akka.actor.testkit.typed.javadsl.TestProbe;
-import akka.actor.typed.ActorRef;
+import org.apache.pekko.actor.testkit.typed.javadsl.LoggingTestKit;
+import org.apache.pekko.actor.testkit.typed.javadsl.TestProbe;
+import org.apache.pekko.actor.typed.ActorRef;
 import blocks.service.BlockStatus;
 import blocks.testkit.BlockTestBase;
 import com.fasterxml.jackson.databind.JsonNode;

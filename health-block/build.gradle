@@ -5,9 +5,9 @@ plugins {
 }
 
 dependencies {
-    implementation group: 'com.typesafe.akka', name: "akka-stream_${scalaBinaryVersion}", version: akkaTypedVersion
-    implementation group: 'com.typesafe.akka', name: "akka-actor_${scalaBinaryVersion}", version: akkaTypedVersion
-    implementation group: 'com.typesafe.akka', name: "akka-actor-typed_${scalaBinaryVersion}", version: akkaTypedVersion
+    implementation group: 'org.apache.pekko', name: "pekko-stream_${scalaBinaryVersion}", version: pekkoTypedVersion
+    implementation group: 'org.apache.pekko', name: "pekko-actor_${scalaBinaryVersion}", version: pekkoTypedVersion
+    implementation group: 'org.apache.pekko', name: "pekko-actor-typed_${scalaBinaryVersion}", version: pekkoTypedVersion
     implementation group: 'io.swagger.core.v3', name: 'swagger-annotations', version: '2.1.11'
     implementation group: 'javax.ws.rs', name: 'javax.ws.rs-api', version: '2.1.1'
     api project(':service-block')

@@ -1,9 +1,9 @@
 package blocks.testkit;
 
-import akka.actor.testkit.typed.javadsl.ActorTestKit;
-import akka.actor.typed.ActorRef;
-import akka.actor.typed.Behavior;
-import akka.actor.typed.Props;
+import org.apache.pekko.actor.testkit.typed.javadsl.ActorTestKit;
+import org.apache.pekko.actor.typed.ActorRef;
+import org.apache.pekko.actor.typed.Behavior;
+import org.apache.pekko.actor.typed.Props;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;

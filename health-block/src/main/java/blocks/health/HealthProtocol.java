@@ -1,7 +1,7 @@
 package blocks.health;
 
-import akka.actor.typed.ActorRef;
-import akka.japi.Pair;
+import org.apache.pekko.actor.typed.ActorRef;
+import org.apache.pekko.japi.Pair;
 import blocks.service.BlockStatus;
 
 import java.util.Objects;

@@ -5,8 +5,9 @@ plugins {
 }
 
 dependencies {
-    api group: 'com.lightbend.akka', name: "akka-stream-alpakka-jms_${scalaBinaryVersion}", version: '2.0.2'
+    api group: 'org.apache.pekko', name: "pekko-connectors-jms_${scalaBinaryVersion}", version: '1.0.2'
     api group: 'javax.jms', name: 'javax.jms-api', version: '2.0.1'
+//    implementation group: 'org.scala-lang.modules', name: 'scala-java8-compat_2.13', version: '1.0.2'
     api project(':service-block')
     implementation project(':health-block')
 }

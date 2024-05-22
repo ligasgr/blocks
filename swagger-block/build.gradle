@@ -6,8 +6,8 @@ plugins {
 
 dependencies {
     api project(':service-block')
-    implementation group: 'com.github.swagger-akka-http', name: "swagger-akka-http_${scalaBinaryVersion}", version: '2.5.2'
-    implementation group: 'com.typesafe.akka', name: "akka-stream_${scalaBinaryVersion}", version: akkaTypedVersion
+    implementation group: 'com.github.swagger-akka-http', name: "swagger-pekko-http_${scalaBinaryVersion}", version: '2.12.2'
+    implementation group: 'org.apache.pekko', name: "pekko-stream_${scalaBinaryVersion}", version: pekkoTypedVersion
 
     constraints {
         implementation(group: 'com.fasterxml.jackson', name: 'jackson-bom', version: '2.14.2') {

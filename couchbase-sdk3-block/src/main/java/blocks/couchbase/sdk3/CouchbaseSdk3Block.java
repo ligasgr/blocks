@@ -1,6 +1,6 @@
 package blocks.couchbase.sdk3;
 
-import akka.actor.typed.ActorRef;
+import org.apache.pekko.actor.typed.ActorRef;
 import blocks.health.HealthProtocol;
 import blocks.service.AbstractBlock;
 import blocks.service.Block;

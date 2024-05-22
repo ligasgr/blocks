@@ -1,12 +1,12 @@
 package blocks.jms;
 
-import akka.NotUsed;
-import akka.stream.alpakka.jms.JmsConsumerSettings;
-import akka.stream.alpakka.jms.JmsProducerSettings;
-import akka.stream.alpakka.jms.javadsl.JmsConsumerControl;
-import akka.stream.alpakka.jms.javadsl.JmsProducerStatus;
-import akka.stream.javadsl.Sink;
-import akka.stream.javadsl.Source;
+import org.apache.pekko.NotUsed;
+import org.apache.pekko.stream.connectors.jms.JmsConsumerSettings;
+import org.apache.pekko.stream.connectors.jms.JmsProducerSettings;
+import org.apache.pekko.stream.connectors.jms.javadsl.JmsConsumerControl;
+import org.apache.pekko.stream.connectors.jms.javadsl.JmsProducerStatus;
+import org.apache.pekko.stream.javadsl.Sink;
+import org.apache.pekko.stream.javadsl.Source;
 
 import java.util.function.Function;
 

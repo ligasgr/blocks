@@ -1,7 +1,7 @@
 package blocks.websocket;
 
-import akka.http.javadsl.model.ws.TextMessage;
-import akka.stream.javadsl.SourceQueueWithComplete;
+import org.apache.pekko.http.javadsl.model.ws.TextMessage;
+import org.apache.pekko.stream.javadsl.SourceQueueWithComplete;
 
 public interface WebSocketMessageHandler {
 
