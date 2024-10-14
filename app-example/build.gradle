@@ -33,9 +33,9 @@ dockerRun {
 dependencies {
     implementation group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.14.1'
     implementation group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.14.1'
-    implementation group: 'io.swagger.core.v3', name: 'swagger-annotations', version: '2.1.11'
-    implementation group: 'io.swagger.core.v3', name: 'swagger-models', version: '2.1.11'
-    implementation group: 'javax.ws.rs', name: 'javax.ws.rs-api', version: '2.1.1'
+    implementation group: 'io.swagger.core.v3', name: 'swagger-annotations', version: '2.2.23'
+    implementation group: 'io.swagger.core.v3', name: 'swagger-models', version: '2.2.23'
+    implementation group: 'jakarta.ws.rs', name: 'jakarta.ws.rs-api', version: '3.0.0'
     implementation group: 'org.postgresql', name: 'r2dbc-postgresql', version: '0.9.0.M1'
     implementation group: 'org.apache.activemq', name: 'activemq-client', version: '5.16.2'
     implementation project(':service-akka-typed-block')

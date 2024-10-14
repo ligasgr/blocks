@@ -10,9 +10,9 @@ dependencies {
     api group: 'org.apache.pekko', name: "pekko-http-jackson_${scalaBinaryVersion}", version: pekkoHttpVersion
     api group: 'org.apache.pekko', name: "pekko-actor_${scalaBinaryVersion}", version: pekkoTypedVersion
     api group: 'org.apache.pekko', name: "pekko-actor-typed_${scalaBinaryVersion}", version: pekkoTypedVersion
-    api group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.14.2'
-    api group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jdk8', version: '2.14.2'
-    api group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: '2.14.2'
+    api group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.18.0'
+    api group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jdk8', version: '2.18.0'
+    api group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: '2.18.0'
 
     constraints {
         implementation('org.scala-lang:scala-library:2.13.13') {
