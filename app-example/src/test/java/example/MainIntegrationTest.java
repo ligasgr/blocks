@@ -1,14 +1,5 @@
 package example;
 
-import akka.actor.typed.ActorSystem;
-import akka.http.javadsl.Http;
-import akka.http.javadsl.model.HttpEntity;
-import akka.http.javadsl.model.HttpRequest;
-import akka.http.javadsl.model.HttpResponse;
-import akka.http.javadsl.unmarshalling.Unmarshaller;
-import akka.japi.Pair;
-import akka.stream.javadsl.Sink;
-import akka.stream.javadsl.Source;
 import blocks.health.ServiceHealth;
 import blocks.service.JsonUtil;
 import blocks.service.ServiceProtocol;
@@ -16,6 +7,15 @@ import blocks.service.TypesafeServiceConfig;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.apache.activemq.junit.EmbeddedActiveMQBroker;
+import org.apache.pekko.actor.typed.ActorSystem;
+import org.apache.pekko.http.javadsl.Http;
+import org.apache.pekko.http.javadsl.model.HttpEntity;
+import org.apache.pekko.http.javadsl.model.HttpRequest;
+import org.apache.pekko.http.javadsl.model.HttpResponse;
+import org.apache.pekko.http.javadsl.unmarshalling.Unmarshaller;
+import org.apache.pekko.japi.Pair;
+import org.apache.pekko.stream.javadsl.Sink;
+import org.apache.pekko.stream.javadsl.Source;
 import org.junit.Rule;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -53,24 +53,23 @@ public class MainIntegrationTest {
     public final MongoDBContainer mongoDBContainer = new MongoDBContainer(DockerImageName.parse("mongo:4.0.10"));
     @Rule
     public final CouchbaseContainer couchbaseContainer = new CouchbaseContainer(DockerImageName.parse("couchbase/server:6.6.6"))
-            .withBucket(new BucketDefinition("test")).withCredentials(USERNAME, PASSWORD);
+        .withBucket(new BucketDefinition("test")).withCredentials(USERNAME, PASSWORD);
     @Rule
     public final PostgreSQLContainer postgreSQLContainer = new PostgreSQLContainer(DockerImageName.parse("postgres:14.7"))
-            .withDatabaseName("sample_db").withUsername(USERNAME).withPassword(PASSWORD);
+        .withDatabaseName("sample_db").withUsername(USERNAME).withPassword(PASSWORD);
     private Http http;
-
 
     @Test
     public void startsTheServiceCorrectlyUntilIsFullyHealthy() throws IOException, ExecutionException, InterruptedException {
         try (InputStream templateStream = MainIntegrationTest.class.getResourceAsStream("/TEMPLATE.conf")) {
             final String templateString = new String(Objects.requireNonNull(templateStream).readAllBytes(), StandardCharsets.UTF_8);
             final String filledTemplate = templateString
-                    .replace("${postgresPort}", Integer.toString(postgreSQLContainer.getMappedPort(POSTGRESQL_PORT)))
-                    .replace("${mongoPort}", Integer.toString(mongoDBContainer.getMappedPort(27017)))
-                    .replace("${couchbasePort}", Integer.toString(couchbaseContainer.getBootstrapCarrierDirectPort()));
+                .replace("${postgresPort}", Integer.toString(postgreSQLContainer.getMappedPort(POSTGRESQL_PORT)))
+                .replace("${mongoPort}", Integer.toString(mongoDBContainer.getMappedPort(27017)))
+                .replace("${couchbasePort}", Integer.toString(couchbaseContainer.getBootstrapCarrierDirectPort()));
             final Config config = ConfigFactory.parseString(filledTemplate)
-                    .withFallback(ConfigFactory.defaultReference())
-                    .resolve();
+                .withFallback(ConfigFactory.defaultReference())
+                .resolve();
             ActorSystem<ServiceProtocol.Message> system = null;
             try {
                 system = startApplication(new TypesafeServiceConfig(Pair.create("TEST", config)));
@@ -82,10 +81,10 @@ public class MainIntegrationTest {
                     assertEquals(200, response.status().intValue());
                     Unmarshaller<HttpEntity, ServiceHealth> unmarshal = JsonUtil.unmarshaller(ServiceHealth.class);
                     ServiceHealth serviceHealth = Source.single(response.entity())
-                            .mapAsync(1, // unmarshal each element
-                                    bs -> unmarshal.unmarshal(bs, finalSystem)
-                            ).runWith(Sink.head(), finalSystem).toCompletableFuture().get();
-                    assertTrue(serviceHealth.isHealthy);
+                        .mapAsync(1, // unmarshal each element
+                            bs -> unmarshal.unmarshal(bs, finalSystem)
+                        ).runWith(Sink.head(), finalSystem).toCompletableFuture().get();
+                    assertTrue(serviceHealth.isHealthy());
                 });
                 HttpResponse swaggerApiResponse = http.singleRequest(HttpRequest.GET("http://localhost:8080/api-docs/openapi.json")).toCompletableFuture().get();
                 assertEquals(200, swaggerApiResponse.status().intValue());

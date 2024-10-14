@@ -1,8 +1,8 @@
 package blocks.service;
 
-import akka.actor.typed.DispatcherSelector;
-import akka.actor.typed.javadsl.ActorContext;
-import akka.dispatch.Futures$;
+import org.apache.pekko.actor.typed.DispatcherSelector;
+import org.apache.pekko.actor.typed.javadsl.ActorContext;
+import org.apache.pekko.dispatch.Futures$;
 import scala.concurrent.ExecutionContextExecutor;
 
 import java.util.List;

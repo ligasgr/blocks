@@ -1,10 +1,10 @@
 package blocks.service;
 
-import akka.actor.typed.ActorSystem;
-import akka.event.Logging;
-import akka.event.LoggingAdapter;
-import akka.http.javadsl.server.ExceptionHandler;
-import akka.http.javadsl.server.RejectionHandler;
+import org.apache.pekko.actor.typed.ActorSystem;
+import org.apache.pekko.event.Logging;
+import org.apache.pekko.event.LoggingAdapter;
+import org.apache.pekko.http.javadsl.server.ExceptionHandler;
+import org.apache.pekko.http.javadsl.server.RejectionHandler;
 
 import java.time.Clock;
 import java.util.HashMap;

@@ -1,7 +1,7 @@
 package blocks.service;
 
-import akka.http.javadsl.ServerBinding;
-import akka.http.javadsl.server.Route;
+import org.apache.pekko.http.javadsl.ServerBinding;
+import org.apache.pekko.http.javadsl.server.Route;
 
 import java.util.Collections;
 import java.util.List;

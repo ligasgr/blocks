@@ -6,9 +6,7 @@ plugins {
 
 dependencies {
     api 'org.mongodb:mongodb-driver-reactivestreams:4.3.4'
-    //use https://mvnrepository.com/artifact/com.lightbend.akka/akka-stream-alpakka-mongodb_2.13/3.0.0
-//    https://doc.akka.io/docs/alpakka/current/mongodb.html
-    api group: 'com.typesafe.akka', name: "akka-stream_${scalaBinaryVersion}", version: akkaTypedVersion
+    api group: 'org.apache.pekko', name: "pekko-stream_${scalaBinaryVersion}", version: pekkoTypedVersion
     api project(':service-block')
     implementation project(':health-block')
     implementation project(':secrets-config-block')

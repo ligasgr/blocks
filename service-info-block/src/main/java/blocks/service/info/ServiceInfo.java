@@ -1,7 +1,7 @@
 package blocks.service.info;
 
-import akka.http.javadsl.marshalling.Marshaller;
-import akka.http.javadsl.model.RequestEntity;
+import org.apache.pekko.http.javadsl.marshalling.Marshaller;
+import org.apache.pekko.http.javadsl.model.RequestEntity;
 import blocks.service.JsonUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 

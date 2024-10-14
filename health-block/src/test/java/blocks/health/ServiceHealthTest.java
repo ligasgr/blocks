@@ -46,7 +46,7 @@ public class ServiceHealthTest {
             "  \"healthAt\" : \"1970-01-01T00:00:00.123Z\"," + NEW_LINE +
             "  \"serviceName\" : \"sample\"" + NEW_LINE +
             "}";
-    private Clock clock = Clock.fixed(Instant.ofEpochMilli(123L), ZoneId.of("UTC"));
+    private final Clock clock = Clock.fixed(Instant.ofEpochMilli(123L), ZoneId.of("UTC"));
 
     @Test
     public void inlinesStaticProperties() throws JsonProcessingException {

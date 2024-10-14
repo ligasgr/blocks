@@ -1,17 +1,17 @@
 package blocks.jms;
 
-import akka.actor.typed.ActorRef;
-import akka.actor.typed.Behavior;
-import akka.actor.typed.javadsl.AbstractBehavior;
-import akka.actor.typed.javadsl.ActorContext;
-import akka.actor.typed.javadsl.Behaviors;
-import akka.actor.typed.javadsl.Receive;
-import akka.actor.typed.javadsl.ReceiveBuilder;
-import akka.japi.Pair;
-import akka.stream.alpakka.jms.javadsl.JmsConnectorState;
 import blocks.health.ComponentHealth;
 import blocks.health.HealthProtocol;
 import blocks.service.BlockStatus;
+import org.apache.pekko.actor.typed.ActorRef;
+import org.apache.pekko.actor.typed.Behavior;
+import org.apache.pekko.actor.typed.javadsl.AbstractBehavior;
+import org.apache.pekko.actor.typed.javadsl.ActorContext;
+import org.apache.pekko.actor.typed.javadsl.Behaviors;
+import org.apache.pekko.actor.typed.javadsl.Receive;
+import org.apache.pekko.actor.typed.javadsl.ReceiveBuilder;
+import org.apache.pekko.japi.Pair;
+import org.apache.pekko.stream.connectors.jms.javadsl.JmsConnectorState;
 
 import java.time.Clock;
 import java.time.ZonedDateTime;
@@ -23,7 +23,7 @@ import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.stream.Collectors;
 
-import static akka.stream.alpakka.jms.javadsl.JmsConnectorState.Connected;
+import static org.apache.pekko.stream.connectors.jms.javadsl.JmsConnectorState.Connected;
 
 public class JmsBlockHealthCheckActor extends AbstractBehavior<JmsBlockHealthCheckActor.Protocol.Message> {
     private static final Protocol.CheckHealth CHECK_HEALTH = new Protocol.CheckHealth();

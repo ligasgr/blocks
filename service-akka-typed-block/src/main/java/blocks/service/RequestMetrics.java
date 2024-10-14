@@ -1,17 +1,17 @@
 package blocks.service;
 
-import akka.event.LoggingAdapter;
-import akka.http.javadsl.model.HttpRequest;
-import akka.http.javadsl.model.HttpResponse;
-import akka.http.javadsl.model.RemoteAddress;
-import akka.http.javadsl.server.Complete;
-import akka.http.javadsl.server.Directives;
-import akka.http.javadsl.server.RequestContext;
-import akka.http.javadsl.server.Route;
-import akka.http.javadsl.server.RouteResult;
-import akka.http.javadsl.server.RouteResults;
-import akka.stream.javadsl.Flow;
-import akka.util.ByteString;
+import org.apache.pekko.event.LoggingAdapter;
+import org.apache.pekko.http.javadsl.model.HttpRequest;
+import org.apache.pekko.http.javadsl.model.HttpResponse;
+import org.apache.pekko.http.javadsl.model.RemoteAddress;
+import org.apache.pekko.http.javadsl.server.Complete;
+import org.apache.pekko.http.javadsl.server.Directives;
+import org.apache.pekko.http.javadsl.server.RequestContext;
+import org.apache.pekko.http.javadsl.server.Route;
+import org.apache.pekko.http.javadsl.server.RouteResult;
+import org.apache.pekko.http.javadsl.server.RouteResults;
+import org.apache.pekko.stream.javadsl.Flow;
+import org.apache.pekko.util.ByteString;
 
 import java.util.function.Function;
 import java.util.function.Supplier;

@@ -1,7 +1,7 @@
 package blocks.health;
 
-import akka.actor.typed.ActorRef;
-import akka.http.javadsl.server.Route;
+import org.apache.pekko.actor.typed.ActorRef;
+import org.apache.pekko.http.javadsl.server.Route;
 import blocks.service.AbstractBlock;
 import blocks.service.Block;
 import blocks.service.BlockConfig;

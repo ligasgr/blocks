@@ -6,5 +6,5 @@ plugins {
 
 dependencies {
     api project(':service-block')
-    implementation group: 'com.typesafe.akka', name: "akka-stream_${scalaBinaryVersion}", version: akkaTypedVersion
+    implementation group: 'org.apache.pekko', name: "pekko-stream_${scalaBinaryVersion}", version: pekkoTypedVersion
 }

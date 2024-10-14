@@ -1,6 +1,6 @@
 package blocks.service.info;
 
-import akka.actor.typed.ActorRef;
+import org.apache.pekko.actor.typed.ActorRef;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.function.BiConsumer;

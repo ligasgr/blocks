@@ -1,7 +1,7 @@
 package blocks.https.client;
 
-import akka.http.javadsl.ConnectionContext;
-import akka.http.javadsl.HttpsConnectionContext;
+import org.apache.pekko.http.javadsl.ConnectionContext;
+import org.apache.pekko.http.javadsl.HttpsConnectionContext;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;

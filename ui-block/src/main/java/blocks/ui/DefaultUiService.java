@@ -1,8 +1,8 @@
 package blocks.ui;
 
-import akka.http.javadsl.model.ContentTypes;
-import akka.http.javadsl.server.AllDirectives;
-import akka.http.javadsl.server.Route;
+import org.apache.pekko.http.javadsl.model.ContentTypes;
+import org.apache.pekko.http.javadsl.server.AllDirectives;
+import org.apache.pekko.http.javadsl.server.Route;
 import blocks.service.RouteCreator;
 
 public class DefaultUiService extends AllDirectives implements RouteCreator {

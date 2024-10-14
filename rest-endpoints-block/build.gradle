@@ -5,9 +5,9 @@ plugins {
 }
 
 dependencies {
-    implementation group: 'com.typesafe.akka', name: "akka-stream_${scalaBinaryVersion}", version: akkaTypedVersion
-    implementation group: 'com.typesafe.akka', name: "akka-actor_${scalaBinaryVersion}", version: akkaTypedVersion
-    implementation group: 'com.typesafe.akka', name: "akka-actor-typed_${scalaBinaryVersion}", version: akkaTypedVersion
+    implementation group: 'org.apache.pekko', name: "pekko-stream_${scalaBinaryVersion}", version: pekkoTypedVersion
+    implementation group: 'org.apache.pekko', name: "pekko-actor_${scalaBinaryVersion}", version: pekkoTypedVersion
+    implementation group: 'org.apache.pekko', name: "pekko-actor-typed_${scalaBinaryVersion}", version: pekkoTypedVersion
     api project(':service-block')
     implementation project(':health-block')
 }

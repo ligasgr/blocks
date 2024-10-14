@@ -8,7 +8,7 @@ ext {
 }
 
 dependencies {
-    api group: 'com.typesafe.akka', name: "akka-actor-testkit-typed_${scalaBinaryVersion}", version: akkaTypedVersion
+    api group: 'org.apache.pekko', name: "pekko-actor-testkit-typed_${scalaBinaryVersion}", version: pekkoTypedVersion
     api group: 'junit', name: 'junit', version: junitVersion
     api group: 'org.mockito', name: 'mockito-core', version: mockitoVersion
     api group: 'org.hamcrest', name: 'hamcrest', version: hamcrestVersion

@@ -1,11 +1,11 @@
 package blocks.health;
 
-import akka.actor.typed.ActorRef;
-import akka.actor.typed.Scheduler;
-import akka.actor.typed.javadsl.AskPattern;
-import akka.http.javadsl.model.StatusCodes;
-import akka.http.javadsl.server.AllDirectives;
-import akka.http.javadsl.server.Route;
+import org.apache.pekko.actor.typed.ActorRef;
+import org.apache.pekko.actor.typed.Scheduler;
+import org.apache.pekko.actor.typed.javadsl.AskPattern;
+import org.apache.pekko.http.javadsl.model.StatusCodes;
+import org.apache.pekko.http.javadsl.server.AllDirectives;
+import org.apache.pekko.http.javadsl.server.Route;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -19,8 +19,8 @@ import javax.ws.rs.core.MediaType;
 import java.time.Duration;
 import java.util.concurrent.CompletionStage;
 
-import static akka.http.javadsl.model.StatusCodes.OK;
-import static akka.http.javadsl.server.PathMatchers.segment;
+import static org.apache.pekko.http.javadsl.model.StatusCodes.OK;
+import static org.apache.pekko.http.javadsl.server.PathMatchers.segment;
 
 @Path("health/v1")
 public class HealthRestService extends AllDirectives {

@@ -1,7 +1,7 @@
 package blocks.service;
 
-import akka.http.javadsl.model.HttpRequest;
-import akka.http.javadsl.model.RemoteAddress;
+import org.apache.pekko.http.javadsl.model.HttpRequest;
+import org.apache.pekko.http.javadsl.model.RemoteAddress;
 
 public final class RequestLoggingDetails {
     public final RemoteAddress address;

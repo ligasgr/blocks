@@ -1,8 +1,8 @@
 package blocks.service;
 
-import akka.actor.typed.javadsl.ActorContext;
-import akka.http.javadsl.Http;
-import akka.http.javadsl.server.Route;
+import org.apache.pekko.actor.typed.javadsl.ActorContext;
+import org.apache.pekko.http.javadsl.Http;
+import org.apache.pekko.http.javadsl.server.Route;
 
 import java.time.Clock;
 import java.time.Instant;

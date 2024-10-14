@@ -1,9 +1,9 @@
 package blocks.swagger;
 
-import akka.http.javadsl.server.AllDirectives;
-import akka.http.javadsl.server.Route;
-import com.github.swagger.akka.javadsl.Converter;
-import com.github.swagger.akka.javadsl.SwaggerGenerator;
+import org.apache.pekko.http.javadsl.server.AllDirectives;
+import org.apache.pekko.http.javadsl.server.Route;
+import com.github.swagger.pekko.javadsl.Converter;
+import com.github.swagger.pekko.javadsl.SwaggerGenerator;
 import io.swagger.v3.oas.models.ExternalDocumentation;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityScheme;
@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import static akka.http.javadsl.server.PathMatchers.segment;
+import static org.apache.pekko.http.javadsl.server.PathMatchers.segment;
 import static scala.jdk.javaapi.CollectionConverters.asScala;
 
 public final class DefaultSwaggerDocService extends AllDirectives implements SwaggerDocService {

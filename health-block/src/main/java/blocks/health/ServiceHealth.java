@@ -1,13 +1,14 @@
 package blocks.health;
 
-import akka.http.javadsl.marshalling.Marshaller;
-import akka.http.javadsl.model.RequestEntity;
 import blocks.service.JsonUtil;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.apache.pekko.http.javadsl.marshalling.Marshaller;
+import org.apache.pekko.http.javadsl.model.RequestEntity;
 
 import java.time.ZonedDateTime;
 import java.util.Collections;
@@ -56,14 +57,25 @@ public final class ServiceHealth {
         this.staticProperties = Collections.unmodifiableMap(staticProperties);
     }
 
+    @JsonIgnore
+    public boolean isHealthy() {
+        return isHealthy;
+    }
+
     public void setHealthy(final boolean healthy) {
         isHealthy = healthy;
+    }
+
+    @JsonIgnore
+    public boolean isInitialized() {
+        return isInitialized;
     }
 
     public void setInitialized(final boolean initialized) {
         isInitialized = initialized;
     }
 
+    @JsonIgnore
     public Map<String, BlockHealthInfo> getBlocks() {
         return blocks;
     }
@@ -72,6 +84,7 @@ public final class ServiceHealth {
         this.blocks = blocks;
     }
 
+    @JsonIgnore
     public List<ComponentHealth> getDependencies() {
         return dependencies;
     }
@@ -80,6 +93,7 @@ public final class ServiceHealth {
         this.dependencies = dependencies;
     }
 
+    @JsonIgnore
     public ZonedDateTime getStartedAt() {
         return startedAt;
     }
@@ -88,12 +102,18 @@ public final class ServiceHealth {
         this.startedAt = startedAt;
     }
 
+    @JsonIgnore
     public ZonedDateTime getHealthAt() {
         return healthAt;
     }
 
     public void setHealthAt(final ZonedDateTime healthAt) {
         this.healthAt = healthAt;
+    }
+
+    @JsonIgnore
+    public Map<String, JsonNode> getStaticProperties() {
+        return staticProperties;
     }
 
     public void setStaticProperties(final Map<String, JsonNode> staticProperties) {
